@@ -29,7 +29,14 @@ connected_cb (ta_xmpp_client_t *client, void *data)
 static int
 auth_cb (ta_xmpp_client_t *client, void *data)
 {
+  iks *node;
   fprintf (stderr, "authenticated\n");
+
+  /* Sending presence info */
+  node = iks_make_pres (IKS_SHOW_AVAILABLE, "Online");
+  ta_xmpp_client_send (client, node);
+  iks_delete (node);
+
   return 0;
 }
 
@@ -37,6 +44,22 @@ static int
 auth_failed_cb (ta_xmpp_client_t *client, void *data)
 {
   fprintf (stderr, "auth-failed\n");
+  return 0;
+}
+
+static int
+message_received_cb (ta_xmpp_client_t *client, void *data)
+{
+  ikspak *pak;
+  char *body;
+  pak = (ikspak *) data;
+
+  body = iks_find_cdata (pak->x, "body");
+  if (body == NULL)
+    return 0;
+
+  printf ("blah: %s\n", body);
+  fprintf (stderr, "message-received\n");
   return 0;
 }
 
@@ -49,8 +72,8 @@ main (int argc, char **argv)
   int port;
 
   /* Reading xmpp client configuration */
-  jid = "admin@localhost";
-  passwd = "admin";
+  jid = "server@localhost";
+  passwd = "server";
   host = "127.0.0.1";
   port = 5222;
 
@@ -64,6 +87,9 @@ main (int argc, char **argv)
                                 NULL);
   ta_xmpp_client_event_connect (xmpp, "authentication-failed",
                                 (ta_xmpp_client_hook_t) auth_failed_cb,
+                                NULL);
+  ta_xmpp_client_event_connect (xmpp, "message-received",
+                                (ta_xmpp_client_hook_t) message_received_cb,
                                 NULL);
 
   /* Configuring logging stuff */

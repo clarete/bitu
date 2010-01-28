@@ -127,5 +127,7 @@ get_node (void)
       /* Finally associating the processor node to the root one */
       iks_insert_node (root, proc);
     }
+
+  processor_free_cpuinfo (processors, num_procs);
   return root;
 }

@@ -1,4 +1,4 @@
-/* processor.h - This file is part of the diagnosis program
+/* test.c - This file is part of the diagnosis program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -16,19 +16,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SLC_PROCESSOR_H_
-#define SLC_PROCESSOR_H_ 1
-
+#include <stdio.h>
 #include <iksemel.h>
+#include "processor.h"
 
-typedef struct {
-  int number;
-  char *vendor_id;
-  char *model;
-  float clock;                  /* MHz */
-  int cache_size;               /* KB */
-} processor_t;
-
-iks *get_node (void);
-
-#endif /* SLC_PROCESSOR_H_ */
+int
+main (int argc, char **argv)
+{
+  iks *node = get_node ();
+  printf ("%s\n", iks_string (iks_stack (node), node));
+  iks_delete (node);
+  return 0;
+}

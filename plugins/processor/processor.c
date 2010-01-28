@@ -1,4 +1,4 @@
-/* main.c - This file is part of the diagnosis program
+/* processor.c - This file is part of the diagnosis program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -18,43 +18,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <dlfcn.h>
 #include <string.h>
-#include <ctype.h>
 
 #define LINELEN_MAX     255
-
-/* -- utils.c */
-
-char *
-util_strstrip (char *string)
-{
-  char *s;
-  int len = strlen (string);
-
-  while (len--)
-    {
-      if (isspace (string[len]))
-        string[len] = '\0';
-      else
-        break;
-    }
-
-  for (s = string; isspace (*s); *s++);
-  return s;
-}
-
-/* -- processor.h -- */
-
-typedef struct {
-  int number;
-  char *vendor_id;
-  char *model;
-  float clock;                  /* MHz */
-  int cache_size;               /* KB */
-} processor_t;
-
-/* -- processor.c -- */
 
 processor_t *
 processor_new (int number,
@@ -140,25 +106,4 @@ processor_free_cpuinfo (processor_t **processors, int num)
   for (i = 0; i < num; i++)
     processor_free (processors[i]);
   free (processors);
-}
-
-int
-main (int argc, char **argv)
-{
-  int num;
-  int i;
-  processor_t **processors = processor_read_cpuinfo (&num);
-
-  for (i = 0; i < num; i++)
-    {
-      printf ("Processor %d\n", processors[i]->number);
-      printf ("VendorID: %s\n", processors[i]->vendor_id);
-      printf ("Model: %s\n", processors[i]->model);
-      printf ("Cpu MHz: %f\n", processors[i]->clock);
-      printf ("Cache size: %d\n", processors[i]->cache_size);
-      printf ("\n");
-    }
-  processor_free_cpuinfo (processors, num);
-
-  return 0;
 }

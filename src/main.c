@@ -17,29 +17,83 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <dlfcn.h>
-#include <string.h>
+#include <taningia/taningia.h>
+
+static int
+connected_cb (ta_xmpp_client_t *client, void *data)
+{
+  fprintf (stderr, "connected\n");
+  return 0;
+}
+
+static int
+auth_cb (ta_xmpp_client_t *client, void *data)
+{
+  fprintf (stderr, "authenticated\n");
+  return 0;
+}
+
+static int
+auth_failed_cb (ta_xmpp_client_t *client, void *data)
+{
+  fprintf (stderr, "auth-failed\n");
+  return 0;
+}
 
 int
 main (int argc, char **argv)
 {
-  /*
-  int num;
-  int i;
-  processor_t **processors = processor_read_cpuinfo (&num);
+  ta_xmpp_client_t *xmpp;
+  ta_log_t *logger;
+  const char *jid, *passwd, *host;
+  int port;
 
-  for (i = 0; i < num; i++)
+  /* Reading xmpp client configuration */
+  jid = "admin@localhost";
+  passwd = "admin";
+  host = "127.0.0.1";
+  port = 5222;
+
+  /* Configuring xmpp client */
+  xmpp = ta_xmpp_client_new (jid, passwd, host, 5222);
+  ta_xmpp_client_event_connect (xmpp, "connected",
+                                (ta_xmpp_client_hook_t) connected_cb,
+                                NULL);
+  ta_xmpp_client_event_connect (xmpp, "authenticated",
+                                (ta_xmpp_client_hook_t) auth_cb,
+                                NULL);
+  ta_xmpp_client_event_connect (xmpp, "authentication-failed",
+                                (ta_xmpp_client_hook_t) auth_failed_cb,
+                                NULL);
+
+  /* Configuring logging stuff */
+  logger = ta_xmpp_client_get_logger (xmpp);
+  ta_log_set_level (logger, ta_log_get_level (logger) |
+                    TA_LOG_INFO | TA_LOG_DEBUG);
+  ta_log_set_use_colors (logger, 1);
+
+  /* Connecting */
+  if (!ta_xmpp_client_connect (xmpp))
     {
-      printf ("Processor %d\n", processors[i]->number);
-      printf ("VendorID: %s\n", processors[i]->vendor_id);
-      printf ("Model: %s\n", processors[i]->model);
-      printf ("Cpu MHz: %f\n", processors[i]->clock);
-      printf ("Cache size: %d\n", processors[i]->cache_size);
-      printf ("\n");
+      ta_error_t *error;
+      error = ta_xmpp_client_get_error (xmpp);
+      fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
+               ta_error_get_message (error));
+      ta_xmpp_client_free (xmpp);
+      return 1;
     }
-  processor_free_cpuinfo (processors, num);
-  */
 
+  /* Running client */
+  if (!ta_xmpp_client_run (xmpp, 0))
+    {
+      ta_error_t *error;
+      error = ta_xmpp_client_get_error (xmpp);
+      fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
+               ta_error_get_message (error));
+      ta_xmpp_client_free (xmpp);
+      return 1;
+    }
+
+  ta_xmpp_client_free (xmpp);
   return 0;
 }

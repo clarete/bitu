@@ -23,6 +23,11 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([strdup])
 
+# Checks for .pc packages
+PKG_CHECK_MODULES([IKSEMEL], [iksemel])
+AC_SUBST([IKSEMEL_CFLAGS])
+AC_SUBST([IKSEMEL_LIBS])
+
 AC_CONFIG_FILES([
         Makefile
         include/Makefile

@@ -20,28 +20,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <slclient/util.h>
+#include <iksemel.h>
+
 #include "processor.h"
 
 #define LINELEN_MAX     255
 
-processor_t *
-processor_new (int number,
-               const char *vendor_id,
-               const char *model,
-               int clock,
-               int cache_size)
-{
-  processor_t *ret;
-  ret = malloc (sizeof (processor_t));
-  ret->number = number;
-  ret->vendor_id = strdup (vendor_id);
-  ret->model = strdup (model);
-  ret->clock = clock;
-  ret->cache_size = cache_size;
-  return ret;
-}
-
-void
+static void
 processor_free (processor_t *processor)
 {
   free (processor->vendor_id);
@@ -50,7 +35,7 @@ processor_free (processor_t *processor)
 }
 
 /* Reads information present in /proc/cpuinfo. */
-processor_t **
+static processor_t **
 processor_read_cpuinfo (int *num)
 {
   FILE *fd;
@@ -101,11 +86,46 @@ processor_read_cpuinfo (int *num)
   return processors;
 }
 
-void
+static void
 processor_free_cpuinfo (processor_t **processors, int num)
 {
   int i;
   for (i = 0; i < num; i++)
     processor_free (processors[i]);
   free (processors);
+}
+
+
+/* This is the plugin public interface. All other stuff don't need to
+ * be public */
+
+iks *
+get_node (void)
+{
+  int num_procs, i;
+  iks *root, *proc;
+  char snum[256], sclock[256], scache[256];
+  processor_t **processors;
+
+  root = iks_new ("processors");
+  processors = processor_read_cpuinfo (&num_procs);
+  for (i = 0; i < num_procs; i++)
+    {
+      /* Convert non strings in strings to build xml nodes */
+      sprintf (snum, "%d", processors[i]->number);
+      sprintf (sclock, "%f", processors[i]->clock);
+      sprintf (scache, "%d", processors[i]->cache_size);
+
+      /* Building a processor node */
+      proc = iks_new ("processor");
+      iks_insert_attrib (proc, "number", snum);
+      iks_insert_attrib (proc, "vendor_id", processors[i]->vendor_id);
+      iks_insert_attrib (proc, "model", processors[i]->model);
+      iks_insert_attrib (proc, "clock", sclock);
+      iks_insert_attrib (proc, "cache_size", scache);
+
+      /* Finally associating the processor node to the root one */
+      iks_insert_node (root, proc);
+    }
+  return root;
 }

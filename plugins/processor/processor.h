@@ -19,14 +19,12 @@
 #ifndef SLC_PROCESSOR_H_
 #define SLC_PROCESSOR_H_ 1
 
-#define LINELEN_MAX     255
-
 typedef struct {
   int number;
   char *vendor_id;
   char *model;
   float clock;                  /* MHz */
   int cache_size;               /* KB */
-} slc_processor_t;
+} processor_t;
 
 #endif /* SLC_PROCESSOR_H_ */

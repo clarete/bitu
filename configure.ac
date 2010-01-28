@@ -2,12 +2,14 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.65])
-AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
+AC_INIT([slclient], [0.1], [lincoln@comum.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_LIBTOOL
+AM_INIT_AUTOMAKE(foreign)
 
 # Checks for libraries.
 
@@ -20,5 +22,14 @@ AC_CHECK_HEADERS([stdlib.h string.h])
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([strdup])
+
+AC_CONFIG_FILES([
+        Makefile
+        include/Makefile
+        include/slclient/Makefile
+        src/Makefile
+        plugins/Makefile
+        plugins/processor/Makefile
+])
 
 AC_OUTPUT

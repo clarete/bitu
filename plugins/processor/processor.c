@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <slclient/util.h>
+#include "processor.h"
 
 #define LINELEN_MAX     255
 
@@ -71,24 +73,24 @@ processor_read_cpuinfo (int *num)
 
       if (key != NULL)
         {
-          char *skey = util_strstrip (key);
+          char *skey = slc_util_strstrip (key);
           if (strcmp (skey, "processor") == 0)
             {
               processor = malloc (sizeof (processor_t));
-              processor->number = atoi (util_strstrip (val));
+              processor->number = atoi (slc_util_strstrip (val));
               processors = realloc (processors,
                                     sizeof (processor_t) * (counter+1));
               processors[counter] = processor;
               counter++;
             }
           else if (strcmp (skey, "vendor_id") == 0)
-            processor->vendor_id = strdup (util_strstrip (val));
+            processor->vendor_id = strdup (slc_util_strstrip (val));
           else if (strcmp (skey, "model name") == 0)
-            processor->model = strdup (util_strstrip (val));
+            processor->model = strdup (slc_util_strstrip (val));
           else if (strcmp (skey, "cpu MHz") == 0)
-            processor->clock = atof (util_strstrip (val));
+            processor->clock = atof (slc_util_strstrip (val));
           else if (strcmp (skey, "cache size") == 0)
-            processor->cache_size = atoi (util_strstrip (val));
+            processor->cache_size = atoi (slc_util_strstrip (val));
         }
     }
 

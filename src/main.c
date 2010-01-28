@@ -21,11 +21,10 @@
 #include <dlfcn.h>
 #include <string.h>
 
-#include "util.h"
-
 int
 main (int argc, char **argv)
 {
+  /*
   int num;
   int i;
   processor_t **processors = processor_read_cpuinfo (&num);
@@ -40,6 +39,7 @@ main (int argc, char **argv)
       printf ("\n");
     }
   processor_free_cpuinfo (processors, num);
+  */
 
   return 0;
 }

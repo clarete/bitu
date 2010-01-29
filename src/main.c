@@ -16,7 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <getopt.h>
+#include <iksemel.h>
 #include <taningia/taningia.h>
 
 static int
@@ -47,6 +52,13 @@ auth_failed_cb (ta_xmpp_client_t *client, void *data)
   return 0;
 }
 
+static void
+usage (const char *prname)
+{
+  printf ("Usage: %s --jid=JID --password=PASSWD [--host=HOST, --port=PORT]\n",
+          prname);
+}
+
 static int
 message_received_cb (ta_xmpp_client_t *client, void *data)
 {
@@ -66,19 +78,70 @@ message_received_cb (ta_xmpp_client_t *client, void *data)
 int
 main (int argc, char **argv)
 {
+  /* xmpp stuff */
   ta_xmpp_client_t *xmpp;
   ta_log_t *logger;
-  const char *jid, *passwd, *host;
-  int port;
+  const char *jid = NULL, *passwd = NULL, *host = NULL;
+  int port = 5222;
 
-  /* Reading xmpp client configuration */
-  jid = "server@localhost";
-  passwd = "server";
-  host = "127.0.0.1";
-  port = 5222;
+  /* getopt stuff */
+  int c;
+  static struct option long_options[] = {
+    { "jid", required_argument, NULL, 'j' },
+    { "password", required_argument, NULL, 'p' },
+    { "host", optional_argument, NULL, 'H' },
+    { "port", optional_argument, NULL, 'P' },
+    { "help", no_argument, NULL, 'h' },
+    { 0, 0, 0, 0 }
+  };
+
+  while ((c = getopt_long (argc, argv, "j:p:H:P:", long_options, NULL)) != -1)
+    {
+      switch (c)
+        {
+        case 'j':
+          jid = strdup (optarg);
+          break;
+
+        case 'p':
+          passwd = strdup (optarg);
+          break;
+
+        case 'H':
+          host = strdup (optarg);
+          break;
+
+        case 'P':
+          port = atoi (optarg);
+          break;
+
+        case 'h':
+          usage (argv[0]);
+          exit (EXIT_SUCCESS);
+          break;
+
+        default:
+          fprintf (stderr, "Try `%s --help' for more information\n", argv[0]);
+          break;
+        }
+    }
+
+  /* Some param validation */
+  if (jid == NULL || passwd == NULL)
+    {
+      usage (argv[0]);
+      exit (EXIT_FAILURE);
+    }
+  if (host == NULL)
+    {
+      ikstack *stack = iks_stack_new (255, 64);
+      iksid *id = iks_id_new (stack, jid);
+      host = id->server;
+      iks_stack_delete (stack);
+    }
 
   /* Configuring xmpp client */
-  xmpp = ta_xmpp_client_new (jid, passwd, host, 5222);
+  xmpp = ta_xmpp_client_new (jid, passwd, host, port);
   ta_xmpp_client_event_connect (xmpp, "connected",
                                 (ta_xmpp_client_hook_t) connected_cb,
                                 NULL);

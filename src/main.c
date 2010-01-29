@@ -49,6 +49,7 @@ static int
 auth_failed_cb (ta_xmpp_client_t *client, void *data)
 {
   fprintf (stderr, "auth-failed\n");
+  ta_xmpp_client_disconnect (client);
   return 0;
 }
 

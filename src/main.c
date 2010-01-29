@@ -53,13 +53,6 @@ auth_failed_cb (ta_xmpp_client_t *client, void *data)
   return 0;
 }
 
-static void
-usage (const char *prname)
-{
-  printf ("Usage: %s --jid=JID --password=PASSWD [--host=HOST, --port=PORT]\n",
-          prname);
-}
-
 static int
 message_received_cb (ta_xmpp_client_t *client, void *data)
 {
@@ -74,6 +67,13 @@ message_received_cb (ta_xmpp_client_t *client, void *data)
   printf ("blah: %s\n", body);
   fprintf (stderr, "message-received\n");
   return 0;
+}
+
+static void
+usage (const char *prname)
+{
+  printf ("Usage: %s --jid=JID --password=PASSWD [--host=HOST, --port=PORT]\n",
+          prname);
 }
 
 int

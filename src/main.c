@@ -82,7 +82,7 @@ main (int argc, char **argv)
   /* xmpp stuff */
   ta_xmpp_client_t *xmpp;
   ta_log_t *logger;
-  const char *jid = NULL, *passwd = NULL, *host = NULL;
+  char *jid = NULL, *passwd = NULL, *host = NULL;
   int port = 5222;
 
   /* getopt stuff */
@@ -137,12 +137,17 @@ main (int argc, char **argv)
     {
       ikstack *stack = iks_stack_new (255, 64);
       iksid *id = iks_id_new (stack, jid);
-      host = id->server;
+      host = strdup (id->server);
       iks_stack_delete (stack);
     }
 
   /* Configuring xmpp client */
   xmpp = ta_xmpp_client_new (jid, passwd, host, port);
+
+  free (jid);
+  free (passwd);
+  free (host);
+
   ta_xmpp_client_event_connect (xmpp, "connected",
                                 (ta_xmpp_client_hook_t) connected_cb,
                                 NULL);

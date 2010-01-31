@@ -23,11 +23,12 @@
 #include <getopt.h>
 #include <iksemel.h>
 #include <taningia/taningia.h>
+#include <slclient/util.h>
+#include <slclient/loader.h>
 
 static int
 connected_cb (ta_xmpp_client_t *client, void *data)
 {
-  fprintf (stderr, "connected\n");
   return 0;
 }
 
@@ -35,7 +36,6 @@ static int
 auth_cb (ta_xmpp_client_t *client, void *data)
 {
   iks *node;
-  fprintf (stderr, "authenticated\n");
 
   /* Sending presence info */
   node = iks_make_pres (IKS_SHOW_AVAILABLE, "Online");
@@ -48,24 +48,36 @@ auth_cb (ta_xmpp_client_t *client, void *data)
 static int
 auth_failed_cb (ta_xmpp_client_t *client, void *data)
 {
-  fprintf (stderr, "auth-failed\n");
   ta_xmpp_client_disconnect (client);
   return 0;
 }
 
 static int
-message_received_cb (ta_xmpp_client_t *client, void *data)
+message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 {
-  ikspak *pak;
-  char *body;
-  pak = (ikspak *) data;
+  char *body, *message;
+  iks *answer;
+  slc_plugin_t *plugin;
 
-  body = iks_find_cdata (pak->x, "body");
+  body = slc_util_strstrip (strdup (iks_find_cdata (pak->x, "body")));
   if (body == NULL)
     return 0;
 
-  printf ("blah: %s\n", body);
-  fprintf (stderr, "message-received\n");
+  plugin = slc_plugin_ctx_find ((slc_plugin_ctx_t *) data, body);
+  if (plugin == NULL)
+    {
+      /* I don't care if sprintf truncates the message */
+      message = malloc (128);
+      sprintf (message, "Plugin \"%s\" not found", body);
+    }
+  else
+    message = slc_plugin_message_return (plugin);
+
+  answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message);
+  ta_xmpp_client_send (client, answer);
+  iks_delete (answer);
+  free (message);
+  free (body);
   return 0;
 }
 
@@ -95,6 +107,8 @@ main (int argc, char **argv)
     { "help", no_argument, NULL, 'h' },
     { 0, 0, 0, 0 }
   };
+
+  slc_plugin_ctx_t *plugin_ctx;
 
   while ((c = getopt_long (argc, argv, "j:p:H:P:", long_options, NULL)) != -1)
     {
@@ -141,6 +155,16 @@ main (int argc, char **argv)
       iks_stack_delete (stack);
     }
 
+  /* Preparing the plugin context */
+  plugin_ctx = slc_plugin_ctx_new ();
+  slc_plugin_ctx_load (plugin_ctx, "libprocessor.so");
+
+  /* TODO: Make it work. This should load all plugins loaded in the
+   * last time that the client was run.
+   if (!slc_plugin_ctx_load_from_file (plugin_ctx, DEFAULT_PLUGIN_FILE))
+     TODO: report an error to the user.;
+   */
+
   /* Configuring xmpp client */
   xmpp = ta_xmpp_client_new (jid, passwd, host, port);
 
@@ -159,7 +183,7 @@ main (int argc, char **argv)
                                 NULL);
   ta_xmpp_client_event_connect (xmpp, "message-received",
                                 (ta_xmpp_client_hook_t) message_received_cb,
-                                NULL);
+                                plugin_ctx);
 
   /* Configuring logging stuff */
   logger = ta_xmpp_client_get_logger (xmpp);
@@ -174,6 +198,7 @@ main (int argc, char **argv)
       error = ta_xmpp_client_get_error (xmpp);
       fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
                ta_error_get_message (error));
+      slc_plugin_ctx_free (plugin_ctx);
       ta_xmpp_client_free (xmpp);
       return 1;
     }
@@ -185,10 +210,12 @@ main (int argc, char **argv)
       error = ta_xmpp_client_get_error (xmpp);
       fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
                ta_error_get_message (error));
+      slc_plugin_ctx_free (plugin_ctx);
       ta_xmpp_client_free (xmpp);
       return 1;
     }
 
+  slc_plugin_ctx_free (plugin_ctx);
   ta_xmpp_client_free (xmpp);
   return 0;
 }

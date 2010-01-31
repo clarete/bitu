@@ -17,14 +17,14 @@
  */
 
 #include <stdio.h>
-#include <iksemel.h>
+#include <stdlib.h>
 #include "processor.h"
 
 int
 main (int argc, char **argv)
 {
-  iks *node = get_node ();
-  printf ("%s\n", iks_string (iks_stack (node), node));
-  iks_delete (node);
+  char *info = plugin_message_return ();
+  printf (info);
+  free (info);
   return 0;
 }

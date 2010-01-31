@@ -99,35 +99,99 @@ processor_free_cpuinfo (processor_t **processors, int num)
 /* This is the plugin public interface. All other stuff don't need to
  * be public */
 
-iks *
-get_node (void)
+const char *
+plugin_name (void)
 {
-  int num_procs, i;
-  iks *root, *proc;
-  char snum[256], sclock[256], scache[256];
-  processor_t **processors;
+  return "processor-info";
+}
 
-  root = iks_new ("processors");
+int
+plugin_num_params (void)
+{
+  return 0;
+}
+
+char *
+plugin_message_return (void)
+{
+  char *ret = NULL;
+  int num_procs, i;
+  processor_t **processors;
+  int total_size = 0;
+
   processors = processor_read_cpuinfo (&num_procs);
   for (i = 0; i < num_procs; i++)
     {
-      /* Convert non strings in strings to build xml nodes */
-      sprintf (snum, "%d", processors[i]->number);
-      sprintf (sclock, "%f", processors[i]->clock);
-      sprintf (scache, "%d", processors[i]->cache_size);
+      char *np, *proc;
+      int n, size = 100;
 
-      /* Building a processor node */
-      proc = iks_new ("processor");
-      iks_insert_attrib (proc, "number", snum);
-      iks_insert_attrib (proc, "vendor_id", processors[i]->vendor_id);
-      iks_insert_attrib (proc, "model", processors[i]->model);
-      iks_insert_attrib (proc, "clock", sclock);
-      iks_insert_attrib (proc, "cache_size", scache);
+      if ((proc = malloc (size)) == NULL)
+        {
+          processor_free_cpuinfo (processors, num_procs);
+          return NULL;
+        }
 
-      /* Finally associating the processor node to the root one */
-      iks_insert_node (root, proc);
+      /* This while builds a single processor string. The `proc' var
+       * will be concatenated to the `ret' string after that. This is
+       * done to make sure that enought space will be alocated to each
+       * processor info.*/
+      while (1)
+        {
+          n = snprintf (proc, size,
+                        "Processor %d\n"
+                        "Vendor ID: %s\n"
+                        "Model: %s\n"
+                        "Clock: %f\n"
+                        "Cache size: %d\n\n",
+                        processors[i]->number,
+                        processors[i]->vendor_id,
+                        processors[i]->model,
+                        processors[i]->clock,
+                        processors[i]->cache_size);
+
+          /* Success when writting, let's continue our job out of this
+           * loop. */
+          if (n > -1 && n < size)
+            {
+              total_size += n;
+              break;
+            }
+
+          /* Not enought space, let's try again with more space. */
+          if (n > -1)
+            size = n + 1;
+          else
+            size *= 2;
+          if ((np = realloc (proc, size)) == NULL)
+            {
+              processor_free_cpuinfo (processors, num_procs);
+              free (proc);
+              return NULL;
+            }
+          else
+            proc = np;
+        }
+
+      /* Time to concat the current processor to the main info
+       * string */
+      if (ret == NULL)          /* First one */
+        ret = strdup (proc);
+      else                      /* Next ones */
+        {
+          char *nret;
+          if ((nret = realloc (ret, total_size+1)) == NULL)
+            {
+              free (proc);
+              free (ret);
+              processor_free_cpuinfo (processors, num_procs);
+              return NULL;
+            }
+          else
+            ret = nret;
+          strncat (ret, proc, total_size);
+        }
+      free (proc);
     }
-
   processor_free_cpuinfo (processors, num_procs);
-  return root;
+  return ret;
 }

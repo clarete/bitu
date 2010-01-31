@@ -19,8 +19,6 @@
 #ifndef SLC_PROCESSOR_H_
 #define SLC_PROCESSOR_H_ 1
 
-#include <iksemel.h>
-
 typedef struct {
   int number;
   char *vendor_id;
@@ -29,6 +27,10 @@ typedef struct {
   int cache_size;               /* KB */
 } processor_t;
 
-iks *get_node (void);
+const char *plugin_name (void);
+
+int plugin_num_params (void);
+
+char *plugin_message_return (void);
 
 #endif /* SLC_PROCESSOR_H_ */

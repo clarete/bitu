@@ -102,7 +102,7 @@ processor_free_cpuinfo (processor_t **processors, int num)
 const char *
 plugin_name (void)
 {
-  return "processor-info";
+  return "cpuinfo";
 }
 
 int

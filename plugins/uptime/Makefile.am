@@ -6,5 +6,5 @@ libuptime_la_LDFLAGS = $(top_srcdir)/src/libslclient.la
 noinst_PROGRAMS = test
 test_SOURCES = test.c uptime.c uptime.h
 test_CFLAGS = -I$(top_srcdir)/include
-test_LDFLAGS = $(top_srcdir)/src/libslclient.la
+test_LDFLAGS =
 test_LDADD =

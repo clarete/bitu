@@ -33,5 +33,7 @@ void slc_plugin_ctx_free (slc_plugin_ctx_t *plugin_ctx);
 int slc_plugin_ctx_load (slc_plugin_ctx_t *plugin_ctx, const char *lib);
 slc_plugin_t *slc_plugin_ctx_find (slc_plugin_ctx_t *plugin_ctx,
                                    const char *name);
+int slc_plugin_ctx_load_from_file (slc_plugin_ctx_t *plugin_ctx,
+                                   const char *fname);
 
 #endif /* SLC_LOADER_H_ */

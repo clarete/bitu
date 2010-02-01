@@ -20,9 +20,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <slclient/util.h>
 #include <slclient/loader.h>
 #include "hashtable.h"
 #include "hashtable-utils.h"
+
+#define LINELEN_MAX 255
 
 struct slc_plugin
 {
@@ -132,4 +135,25 @@ slc_plugin_t *
 slc_plugin_ctx_find (slc_plugin_ctx_t *plugin_ctx, const char *name)
 {
   return hashtable_get (plugin_ctx->plugins, name);
+}
+
+int
+slc_plugin_ctx_load_from_file (slc_plugin_ctx_t *plugin_ctx,
+                               const char *fname)
+{
+  FILE *fd;
+  char line[LINELEN_MAX];
+
+  if ((fd = fopen (fname, "r")) == NULL)
+    return 0;
+  while (fgets (line, LINELEN_MAX, fd))
+    {
+      const char *lib;
+      if (line[0] == '#')
+        continue;
+      lib = (const char *) slc_util_strstrip (line);
+      slc_plugin_ctx_load (plugin_ctx, lib);
+    }
+  fclose (fd);
+  return 1;
 }

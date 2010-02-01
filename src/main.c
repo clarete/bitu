@@ -84,7 +84,7 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 static void
 usage (const char *prname)
 {
-  printf ("Usage: %s --jid=JID --password=PASSWD [--host=HOST, --port=PORT]\n",
+  printf ("Usage: %s --jid=JID --password=PASSWD [--host=HOST, --port=PORT, --plugins-file=PFILE]\n",
           prname);
 }
 
@@ -95,6 +95,7 @@ main (int argc, char **argv)
   ta_xmpp_client_t *xmpp;
   ta_log_t *logger;
   char *jid = NULL, *passwd = NULL, *host = NULL;
+  char *plugins_file = NULL;
   int port = 5222;
 
   /* getopt stuff */
@@ -104,6 +105,7 @@ main (int argc, char **argv)
     { "password", required_argument, NULL, 'p' },
     { "host", optional_argument, NULL, 'H' },
     { "port", optional_argument, NULL, 'P' },
+    { "plugins-file", optional_argument, NULL, 'f' },
     { "help", no_argument, NULL, 'h' },
     { 0, 0, 0, 0 }
   };
@@ -128,6 +130,10 @@ main (int argc, char **argv)
 
         case 'P':
           port = atoi (optarg);
+          break;
+
+        case 'f':
+          plugins_file = strdup (optarg);
           break;
 
         case 'h':
@@ -157,14 +163,14 @@ main (int argc, char **argv)
 
   /* Preparing the plugin context */
   plugin_ctx = slc_plugin_ctx_new ();
-  slc_plugin_ctx_load (plugin_ctx, "libprocessor.so");
-  slc_plugin_ctx_load (plugin_ctx, "libuptime.so");
 
-  /* TODO: Make it work. This should load all plugins loaded in the
-   * last time that the client was run.
-   if (!slc_plugin_ctx_load_from_file (plugin_ctx, DEFAULT_PLUGIN_FILE))
-     TODO: report an error to the user.;
-   */
+  /* Loading default plugins from a file */
+  if (plugins_file != NULL)
+    {
+      if (!slc_plugin_ctx_load_from_file (plugin_ctx, plugins_file))
+        fprintf (stderr, "Error loading plugins from file\n");
+      free (plugins_file);
+    }
 
   /* Configuring xmpp client */
   xmpp = ta_xmpp_client_new (jid, passwd, host, port);

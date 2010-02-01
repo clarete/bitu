@@ -39,6 +39,7 @@ AC_CONFIG_FILES([
         src/Makefile
         plugins/Makefile
         plugins/processor/Makefile
+        plugins/uptime/Makefile
 ])
 
 AC_OUTPUT

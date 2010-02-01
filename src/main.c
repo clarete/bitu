@@ -158,6 +158,7 @@ main (int argc, char **argv)
   /* Preparing the plugin context */
   plugin_ctx = slc_plugin_ctx_new ();
   slc_plugin_ctx_load (plugin_ctx, "libprocessor.so");
+  slc_plugin_ctx_load (plugin_ctx, "libuptime.so");
 
   /* TODO: Make it work. This should load all plugins loaded in the
    * last time that the client was run.

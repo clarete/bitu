@@ -1,1 +1,1 @@
-SUBDIRS = processor
+SUBDIRS = processor uptime

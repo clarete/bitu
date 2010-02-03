@@ -1,0 +1,15 @@
+README file for the slclient
+============================
+
+This program is intended to be a generic jabber bot.
+
+Dependencies
+============
+
+taningia
+
+ git clone http://git.alfaiati.net/lincoln/taningia.git
+
+iksemel
+
+ 1.2 (packaged in debian)

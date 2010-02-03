@@ -1,4 +1,4 @@
-/* util.c - This file is part of the diagnosis program
+/* util.c - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -18,10 +18,10 @@
 
 #include <string.h>
 #include <ctype.h>
-#include <slclient/util.h>
+#include <bitu/util.h>
 
 char *
-slc_util_strstrip (char *string)
+bitu_util_strstrip (char *string)
 {
   char *s;
   int len = strlen (string);

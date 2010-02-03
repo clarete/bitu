@@ -1,4 +1,4 @@
-/* loader.c - This file is part of the slclient program
+/* loader.c - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -20,14 +20,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dlfcn.h>
-#include <slclient/util.h>
-#include <slclient/loader.h>
+#include <bitu/util.h>
+#include <bitu/loader.h>
 #include "hashtable.h"
 #include "hashtable-utils.h"
 
 #define LINELEN_MAX 255
 
-struct slc_plugin
+struct bitu_plugin
 {
   void *handle;
   const char *(*name) (void);
@@ -35,41 +35,41 @@ struct slc_plugin
   char *(*message_return) (void);
 };
 
-struct slc_plugin_ctx
+struct bitu_plugin_ctx
 {
   hashtable_t *plugins;
 };
 
 const char *
-slc_plugin_name (slc_plugin_t *plugin)
+bitu_plugin_name (bitu_plugin_t *plugin)
 {
   return plugin->name ();
 }
 
 int
-slc_plugin_num_params (slc_plugin_t *plugin)
+bitu_plugin_num_params (bitu_plugin_t *plugin)
 {
   return plugin->num_params ();
 }
 
 char *
-slc_plugin_message_return (slc_plugin_t *plugin)
+bitu_plugin_message_return (bitu_plugin_t *plugin)
 {
   return plugin->message_return ();
 }
 
 void
-slc_plugin_free (slc_plugin_t *plugin)
+bitu_plugin_free (bitu_plugin_t *plugin)
 {
   dlclose (plugin->handle);
   free (plugin);
 }
 
-slc_plugin_t *
-slc_plugin_load (const char *lib)
+bitu_plugin_t *
+bitu_plugin_load (const char *lib)
 {
-  slc_plugin_t *plugin;
-  if ((plugin = malloc (sizeof (slc_plugin_t))) == NULL)
+  bitu_plugin_t *plugin;
+  if ((plugin = malloc (sizeof (bitu_plugin_t))) == NULL)
     return NULL;
 
   plugin->handle = dlopen (lib, RTLD_LAZY);
@@ -88,17 +88,17 @@ slc_plugin_load (const char *lib)
   return plugin;
 }
 
-slc_plugin_ctx_t *
-slc_plugin_ctx_new (void)
+bitu_plugin_ctx_t *
+bitu_plugin_ctx_new (void)
 {
-  slc_plugin_ctx_t *plugin_ctx;
+  bitu_plugin_ctx_t *plugin_ctx;
   if ((plugin_ctx = malloc (sizeof (plugin_ctx))) == NULL)
     {
       return NULL;
     }
 
   plugin_ctx->plugins = hashtable_create (hash_string, string_equal, free,
-                                          (void *) slc_plugin_free);
+                                          (void *) bitu_plugin_free);
   if (plugin_ctx->plugins == NULL)
     {
       free (plugin_ctx);
@@ -108,38 +108,38 @@ slc_plugin_ctx_new (void)
 }
 
 void
-slc_plugin_ctx_free (slc_plugin_ctx_t *plugin_ctx)
+bitu_plugin_ctx_free (bitu_plugin_ctx_t *plugin_ctx)
 {
   hashtable_destroy (plugin_ctx->plugins);
   free (plugin_ctx);
 }
 
 int
-slc_plugin_ctx_load (slc_plugin_ctx_t *plugin_ctx, const char *lib)
+bitu_plugin_ctx_load (bitu_plugin_ctx_t *plugin_ctx, const char *lib)
 {
-  slc_plugin_t *plugin;
-  plugin = slc_plugin_load (lib);
+  bitu_plugin_t *plugin;
+  plugin = bitu_plugin_load (lib);
   if (plugin == NULL)
     return 0;
   if (hashtable_set (plugin_ctx->plugins,
-                     strdup (slc_plugin_name (plugin)),
+                     strdup (bitu_plugin_name (plugin)),
                      plugin))
     {
-      slc_plugin_free (plugin);
+      bitu_plugin_free (plugin);
       return 0;
     }
   return 1;
 }
 
-slc_plugin_t *
-slc_plugin_ctx_find (slc_plugin_ctx_t *plugin_ctx, const char *name)
+bitu_plugin_t *
+bitu_plugin_ctx_find (bitu_plugin_ctx_t *plugin_ctx, const char *name)
 {
   return hashtable_get (plugin_ctx->plugins, name);
 }
 
 int
-slc_plugin_ctx_load_from_file (slc_plugin_ctx_t *plugin_ctx,
-                               const char *fname)
+bitu_plugin_ctx_load_from_file (bitu_plugin_ctx_t *plugin_ctx,
+                                const char *fname)
 {
   FILE *fd;
   char line[LINELEN_MAX];
@@ -151,8 +151,8 @@ slc_plugin_ctx_load_from_file (slc_plugin_ctx_t *plugin_ctx,
       const char *lib;
       if (line[0] == '#')
         continue;
-      lib = (const char *) slc_util_strstrip (line);
-      slc_plugin_ctx_load (plugin_ctx, lib);
+      lib = (const char *) bitu_util_strstrip (line);
+      bitu_plugin_ctx_load (plugin_ctx, lib);
     }
   fclose (fd);
   return 1;

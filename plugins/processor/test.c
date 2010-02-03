@@ -1,4 +1,4 @@
-/* test.c - This file is part of the diagnosis program
+/* test.c - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *

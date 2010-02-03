@@ -1,4 +1,4 @@
-/* util.h - This file is part of the diagnosis program
+/* util.h - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -16,9 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SLC_UTIL_H_
-#define SLC_UTIL_H_ 1
+#ifndef BITU_UTIL_H_
+#define BITU_UTIL_H_ 1
 
-char * slc_util_strstrip (char *string);
+char * bitu_util_strstrip (char *string);
 
-#endif /* SLC_UTIL_H_ */
+#endif /* BITU_UTIL_H_ */

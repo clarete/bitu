@@ -1,4 +1,4 @@
-/* uptime.c - This file is part of the slclient program
+/* uptime.c - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *

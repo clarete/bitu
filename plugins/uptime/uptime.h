@@ -1,4 +1,4 @@
-/* uptime.h - This file is part of the slclient program
+/* uptime.h - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SLC_UPTIME_H_
-#define SLC_UPTIME_H_ 1
+#ifndef BITU_UPTIME_H_
+#define BITU_UPTIME_H_ 1
 
 const char *plugin_name (void);
 
@@ -25,4 +25,4 @@ int plugin_num_params (void);
 
 char *plugin_message_return (void);
 
-#endif /* SLC_UPTIME_H_ */
+#endif /* BITU_UPTIME_H_ */

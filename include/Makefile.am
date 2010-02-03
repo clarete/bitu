@@ -1,1 +1,1 @@
-SUBDIRS = slclient
+SUBDIRS = bitu

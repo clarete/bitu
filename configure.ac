@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.65])
-AC_INIT([slclient], [0.1], [lincoln@comum.org])
+AC_INIT([bitu], [0.1], [lincoln@comum.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config.h])
 
@@ -35,7 +35,7 @@ AC_SUBST([TANINGIA_LIBS])
 AC_CONFIG_FILES([
         Makefile
         include/Makefile
-        include/slclient/Makefile
+        include/bitu/Makefile
         src/Makefile
         plugins/Makefile
         plugins/processor/Makefile

@@ -1,4 +1,4 @@
-/* processor.c - This file is part of the diagnosis program
+/* processor.c - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <slclient/util.h>
+#include <bitu/util.h>
 #include <iksemel.h>
 
 #include "processor.h"
@@ -58,24 +58,24 @@ processor_read_cpuinfo (int *num)
 
       if (key != NULL)
         {
-          char *skey = slc_util_strstrip (key);
+          char *skey = bitu_util_strstrip (key);
           if (strcmp (skey, "processor") == 0)
             {
               processor = malloc (sizeof (processor_t));
-              processor->number = atoi (slc_util_strstrip (val));
+              processor->number = atoi (bitu_util_strstrip (val));
               processors = realloc (processors,
                                     sizeof (processor_t) * (counter+1));
               processors[counter] = processor;
               counter++;
             }
           else if (strcmp (skey, "vendor_id") == 0)
-            processor->vendor_id = strdup (slc_util_strstrip (val));
+            processor->vendor_id = strdup (bitu_util_strstrip (val));
           else if (strcmp (skey, "model name") == 0)
-            processor->model = strdup (slc_util_strstrip (val));
+            processor->model = strdup (bitu_util_strstrip (val));
           else if (strcmp (skey, "cpu MHz") == 0)
-            processor->clock = atof (slc_util_strstrip (val));
+            processor->clock = atof (bitu_util_strstrip (val));
           else if (strcmp (skey, "cache size") == 0)
-            processor->cache_size = atoi (slc_util_strstrip (val));
+            processor->cache_size = atoi (bitu_util_strstrip (val));
         }
     }
 

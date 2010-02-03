@@ -1,5 +1,5 @@
 lib_LTLIBRARIES = libslclient.la
-libslclient_la_SOURCES = util.c loader.c hashtable.c hashtable-utils.c
+libslclient_la_SOURCES = util.c loader.c hashtable.c hashtable.h hashtable-utils.c hashtable-utils.h
 libslclient_la_CFLAGS = $(IKSEMEL_CFLAGS) -I$(top_srcdir)/include
 libslclient_la_LIBADD = $(IKSEMEL_LIBS) -ldl
 

@@ -1,4 +1,4 @@
-/* main.c - This file is part of the diagnosis program
+/* main.c - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -23,8 +23,8 @@
 #include <getopt.h>
 #include <iksemel.h>
 #include <taningia/taningia.h>
-#include <slclient/util.h>
-#include <slclient/loader.h>
+#include <bitu/util.h>
+#include <bitu/loader.h>
 
 static int
 connected_cb (ta_xmpp_client_t *client, void *data)
@@ -57,13 +57,13 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 {
   char *body, *message;
   iks *answer;
-  slc_plugin_t *plugin;
+  bitu_plugin_t *plugin;
 
-  body = slc_util_strstrip (strdup (iks_find_cdata (pak->x, "body")));
+  body = bitu_util_strstrip (strdup (iks_find_cdata (pak->x, "body")));
   if (body == NULL)
     return 0;
 
-  plugin = slc_plugin_ctx_find ((slc_plugin_ctx_t *) data, body);
+  plugin = bitu_plugin_ctx_find ((bitu_plugin_ctx_t *) data, body);
   if (plugin == NULL)
     {
       /* I don't care if sprintf truncates the message */
@@ -71,7 +71,7 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
       sprintf (message, "Plugin \"%s\" not found", body);
     }
   else
-    message = slc_plugin_message_return (plugin);
+    message = bitu_plugin_message_return (plugin);
 
   answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message);
   ta_xmpp_client_send (client, answer);
@@ -110,7 +110,7 @@ main (int argc, char **argv)
     { 0, 0, 0, 0 }
   };
 
-  slc_plugin_ctx_t *plugin_ctx;
+  bitu_plugin_ctx_t *plugin_ctx;
 
   while ((c = getopt_long (argc, argv, "j:p:H:P:", long_options, NULL)) != -1)
     {
@@ -162,12 +162,12 @@ main (int argc, char **argv)
     }
 
   /* Preparing the plugin context */
-  plugin_ctx = slc_plugin_ctx_new ();
+  plugin_ctx = bitu_plugin_ctx_new ();
 
   /* Loading default plugins from a file */
   if (plugins_file != NULL)
     {
-      if (!slc_plugin_ctx_load_from_file (plugin_ctx, plugins_file))
+      if (!bitu_plugin_ctx_load_from_file (plugin_ctx, plugins_file))
         fprintf (stderr, "Error loading plugins from file\n");
       free (plugins_file);
     }
@@ -205,7 +205,7 @@ main (int argc, char **argv)
       error = ta_xmpp_client_get_error (xmpp);
       fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
                ta_error_get_message (error));
-      slc_plugin_ctx_free (plugin_ctx);
+      bitu_plugin_ctx_free (plugin_ctx);
       ta_xmpp_client_free (xmpp);
       return 1;
     }
@@ -217,12 +217,12 @@ main (int argc, char **argv)
       error = ta_xmpp_client_get_error (xmpp);
       fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
                ta_error_get_message (error));
-      slc_plugin_ctx_free (plugin_ctx);
+      bitu_plugin_ctx_free (plugin_ctx);
       ta_xmpp_client_free (xmpp);
       return 1;
     }
 
-  slc_plugin_ctx_free (plugin_ctx);
+  bitu_plugin_ctx_free (plugin_ctx);
   ta_xmpp_client_free (xmpp);
   return 0;
 }

@@ -1,4 +1,4 @@
-/* processor.h - This file is part of the diagnosis program
+/* processor.h - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SLC_PROCESSOR_H_
-#define SLC_PROCESSOR_H_ 1
+#ifndef BITU_PROCESSOR_H_
+#define BITU_PROCESSOR_H_ 1
 
 typedef struct {
   int number;
@@ -33,4 +33,4 @@ int plugin_num_params (void);
 
 char *plugin_message_return (void);
 
-#endif /* SLC_PROCESSOR_H_ */
+#endif /* BITU_PROCESSOR_H_ */

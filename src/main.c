@@ -81,6 +81,24 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
   return 0;
 }
 
+static int
+presence_noticed_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
+{
+  /* We don't need to handle our own presence request. */
+  if (strcmp (pak->from->partial, ta_xmpp_client_get_jid (client)) == 0)
+    return 0;
+
+  /* TODO: A good idea here is to read a whitelist from a file or from
+   * the command line parameters with acceptable jids. Now, I'm just
+   * complaining that someone is trying to add the bot's contact */
+  fprintf (stderr,"Someone wants to talk with me... "
+           "I'm not sure I should =(\n");
+  fprintf (stderr, "His/her name/jid is `%s'.\nThe sysadmin will be wise "
+           "enough to decide if I should talk with this new buddy\n",
+           pak->from->full);
+  return 0;
+}
+
 static void
 usage (const char *prname)
 {
@@ -190,6 +208,9 @@ main (int argc, char **argv)
                                 NULL);
   ta_xmpp_client_event_connect (xmpp, "message-received",
                                 (ta_xmpp_client_hook_t) message_received_cb,
+                                plugin_ctx);
+  ta_xmpp_client_event_connect (xmpp, "presence-noticed",
+                                (ta_xmpp_client_hook_t) presence_noticed_cb,
                                 plugin_ctx);
 
   /* Configuring logging stuff */

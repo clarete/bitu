@@ -15,7 +15,7 @@ Makefile.in
 /ltmain.sh
 /missing
 /stamp-h1
-/src/slclient
+/src/bitu
 /src/test-plugin
 /plugins/processor/test
 /plugins/uptime/test

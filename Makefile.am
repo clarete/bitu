@@ -1,1 +1,5 @@
 SUBDIRS = include src plugins
+
+ACLOCAL_AMFLAGS = -I m4
+
+EXTRA_DIST = README AUTHORS COPYING COPYING.hashtable

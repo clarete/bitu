@@ -35,11 +35,14 @@ plugin_num_params (void)
 char *
 plugin_message_return (void)
 {
-  char message[1024];
+  int bufsize = 1024;
+  char message[bufsize];
   FILE *fd;
+  int written;
   if ((fd = popen ("/usr/bin/uptime", "r")) == NULL)
     return NULL;
-  fread (&message, 1, 1024, fd);
+  written = fread (&message, 1, bufsize, fd);
+  message[written] = '\0';
   pclose (fd);
   return strdup (message);
 }

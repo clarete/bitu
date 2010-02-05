@@ -1,4 +1,4 @@
-/* util.h - This file is part of the bitu program
+/* loader.h - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *

@@ -25,6 +25,7 @@
 #include <taningia/taningia.h>
 #include <bitu/util.h>
 #include <bitu/loader.h>
+#include <bitu/server.h>
 
 static int
 connected_cb (ta_xmpp_client_t *client, void *data)
@@ -280,7 +281,7 @@ main (int argc, char **argv)
     }
 
   /* Running client */
-  if (!ta_xmpp_client_run (xmpp, 0))
+  if (!ta_xmpp_client_run (xmpp, 1))
     {
       ta_error_t *error;
       error = ta_xmpp_client_get_error (xmpp);
@@ -290,6 +291,8 @@ main (int argc, char **argv)
       ta_xmpp_client_free (xmpp);
       return 1;
     }
+
+  bitu_server_run ();
 
   bitu_plugin_ctx_free (plugin_ctx);
   ta_xmpp_client_free (xmpp);

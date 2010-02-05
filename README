@@ -22,21 +22,19 @@ see bitu working properly. Take a look at this::
    | bitu |
     ------
      |
-      \
-      ----------
-     | taningia |
-      ----------
-        |    |
-       /      \
-  ------      ---------
- | glib |    | iksemel |
-  ------      ---------
+    ----------
+   | taningia |
+    ----------
+     |
+    ---------
+   | iksemel |
+    ---------
 
-Both glib and iksemel are available in various systems, including the
-Debian GNU/Linux. If you're using Debian, you can install these two
-taningia dependencies by issuing the command::
+Iksemel is available in various systems, including the Debian
+GNU/Linux. If you're using Debian, you can install this taningia
+dependency by issuing the command::
 
-    # aptitude install libiksemel-dev libglib2.0-dev
+    # aptitude install libiksemel-dev
 
 I've used libiksemel 1.2 to write taningia and bitu. In a very quick
 test things went bad using a newer version...

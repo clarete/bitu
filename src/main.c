@@ -55,26 +55,74 @@ auth_failed_cb (ta_xmpp_client_t *client, void *data)
 static int
 message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 {
-  char *body, *message;
+  char *rawmsg, *body, *cmd, *message;
+  char **params = NULL;
+  int i, counter = 0;
   iks *answer;
   bitu_plugin_t *plugin;
+  int msgbufsize = 128;
 
-  body = bitu_util_strstrip (strdup (iks_find_cdata (pak->x, "body")));
-  if (body == NULL)
-    return 0;
+  rawmsg = strdup (iks_find_cdata (pak->x, "body"));
+  body = bitu_util_strstrip (rawmsg);
+  cmd = strtok (body, " ");
 
-  plugin = bitu_plugin_ctx_find ((bitu_plugin_ctx_t *) data, body);
-  if (plugin == NULL)
+  if (cmd == NULL)
+    {
+      free (body);
+      return 0;
+    }
+  do
+    {
+      char **tmp;
+      char *param = strtok (NULL, " ");
+      size_t len = (sizeof (char *) * (counter+1));
+      if (param == NULL)
+        break;
+      if ((tmp = realloc (params, len)) == NULL)
+        {
+          free (body);
+          break;
+        }
+      else
+        params = tmp;
+      params[counter] = strdup (param);
+      counter++;
+    }
+  while (1);
+
+  plugin = bitu_plugin_ctx_find ((bitu_plugin_ctx_t *) data, cmd);
+  if (plugin == NULL)      /* Too bad, nothing found with that name */
     {
       /* I don't care if sprintf truncates the message */
-      message = malloc (128);
-      sprintf (message, "Plugin \"%s\" not found", body);
+      message = malloc (msgbufsize);
+      snprintf (message, msgbufsize, "Plugin `%s' not found", cmd);
     }
-  else
-    message = bitu_plugin_message_return (plugin);
+  else                     /* Nice, plugin was found! */
+    {
+      /* Validating number of parameters */
+      if (bitu_plugin_num_params (plugin) != counter)
+        {
+          message = malloc (msgbufsize);
+          snprintf (message, msgbufsize,
+                    "Wrong number of parameters. `%s'"
+                    "receives %d but %d were passed", cmd,
+                    bitu_plugin_num_params (plugin),
+                    counter);
+        }
+      else
+        message = bitu_plugin_message_return (plugin);
+    }
 
+  /* Feeding back the user */
   answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message);
   ta_xmpp_client_send (client, answer);
+
+  /* Freeing all parameters collected */
+  for (i = 0; i < counter; i++)
+    free (params[i]);
+  free (params);
+
+  /* Freeing all other stuff */
   iks_delete (answer);
   free (message);
   free (body);

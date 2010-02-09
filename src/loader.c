@@ -76,6 +76,7 @@ bitu_plugin_load (const char *lib)
   if (!plugin->handle)
     {
       fprintf (stderr, "%s\n", dlerror ());
+      free (plugin);
       return NULL;
     }
 

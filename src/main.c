@@ -56,59 +56,38 @@ auth_failed_cb (ta_xmpp_client_t *client, void *data)
 static int
 message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 {
-  char *rawmsg, *body, *cmd, *message;
+  char *rawmsg, *cmd = NULL, *message = NULL;
   char **params = NULL;
-  int i, counter = 0;
+  int i, len;
   iks *answer;
   bitu_plugin_t *plugin;
+  bitu_plugin_ctx_t *plugin_ctx;
   int msgbufsize = 128;
 
+  plugin_ctx = (bitu_plugin_ctx_t *) data;
+
   rawmsg = strdup (iks_find_cdata (pak->x, "body"));
-  body = bitu_util_strstrip (rawmsg);
-  cmd = strtok (body, " ");
-
-  if (cmd == NULL)
+  if (!bitu_util_extract_params (rawmsg, &cmd, &params, &len))
     {
-      free (body);
-      return 0;
+      message = malloc (msgbufsize);
+      snprintf (message, msgbufsize, "The message seems to be empty");
     }
-  do
+  else if ((plugin = bitu_plugin_ctx_find (plugin_ctx, cmd)) == NULL)
     {
-      char **tmp;
-      char *param = strtok (NULL, " ");
-      size_t len = (sizeof (char *) * (counter+1));
-      if (param == NULL)
-        break;
-      if ((tmp = realloc (params, len)) == NULL)
-        {
-          free (body);
-          break;
-        }
-      else
-        params = tmp;
-      params[counter] = strdup (param);
-      counter++;
-    }
-  while (1);
-
-  plugin = bitu_plugin_ctx_find ((bitu_plugin_ctx_t *) data, cmd);
-  if (plugin == NULL)      /* Too bad, nothing found with that name */
-    {
-      /* I don't care if sprintf truncates the message */
       message = malloc (msgbufsize);
       snprintf (message, msgbufsize, "Plugin `%s' not found", cmd);
     }
-  else                     /* Nice, plugin was found! */
+  else
     {
       /* Validating number of parameters */
-      if (bitu_plugin_num_params (plugin) != counter)
+      if (bitu_plugin_num_params (plugin) != len)
         {
           message = malloc (msgbufsize);
           snprintf (message, msgbufsize,
-                    "Wrong number of parameters. `%s'"
+                    "Wrong number of parameters. `%s' "
                     "receives %d but %d were passed", cmd,
                     bitu_plugin_num_params (plugin),
-                    counter);
+                    len);
         }
       else
         message = bitu_plugin_message_return (plugin);
@@ -119,14 +98,15 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
   ta_xmpp_client_send (client, answer);
 
   /* Freeing all parameters collected */
-  for (i = 0; i < counter; i++)
+  for (i = 0; i < len; i++)
     free (params[i]);
   free (params);
 
   /* Freeing all other stuff */
   iks_delete (answer);
   free (message);
-  free (body);
+  if (cmd)
+    free (cmd);
   return 0;
 }
 

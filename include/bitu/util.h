@@ -20,5 +20,7 @@
 #define BITU_UTIL_H_ 1
 
 char * bitu_util_strstrip (char *string);
+int bitu_util_extract_params (const char *line, char **cmd,
+                              char ***params, int *len);
 
 #endif /* BITU_UTIL_H_ */

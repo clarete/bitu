@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <bitu/util.h>
@@ -36,4 +37,49 @@ bitu_util_strstrip (char *string)
 
   for (s = string; isspace (*s); *s++);
   return s;
+}
+
+int
+bitu_util_extract_params (const char *line, char **cmd,
+                          char ***params, int *len)
+{
+  char *line_tmp, *body, *ecmd;
+  char **eparams = NULL;
+  int counter = 0;
+
+  line_tmp = strdup (line);
+  body = bitu_util_strstrip (line_tmp);
+  ecmd = strtok (body, " ");
+  if (ecmd == NULL)
+    {
+      free (body);
+      return 0;
+    }
+  do
+    {
+      char **tmp;
+      char *param = strtok (NULL, " ");
+      size_t elen = (sizeof (char *) * (counter+1));
+      if (param == NULL)
+        break;
+      if ((tmp = realloc (eparams, elen)) == NULL)
+        {
+          free (body);
+          break;
+        }
+      else
+        eparams = tmp;
+      eparams[counter] = strdup (param);
+      counter++;
+    }
+  while (1);
+
+  /* Filling all out params */
+  *cmd = strdup (ecmd);
+  *params = eparams;
+  *len = counter;
+
+  /* Time to free the duplicated string */
+  free (line_tmp);
+  return 1;
 }

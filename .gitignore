@@ -19,5 +19,6 @@ Makefile.in
 /src/bitush
 /src/test-plugin
 /src/test-server
+/src/test-util
 /plugins/processor/test
 /plugins/uptime/test

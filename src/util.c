@@ -35,7 +35,7 @@ bitu_util_strstrip (char *string)
         break;
     }
 
-  for (s = string; isspace (*s); *s++);
+  for (s = string; isspace (*s); s++);
   return s;
 }
 

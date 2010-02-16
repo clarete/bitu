@@ -282,7 +282,7 @@ main (int argc, char **argv)
       return 1;
     }
 
-  bitu_server_run ();
+  bitu_server_run (app);
 
  finalize:
   bitu_plugin_ctx_free (app->plugin_ctx);

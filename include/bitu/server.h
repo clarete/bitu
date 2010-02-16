@@ -19,6 +19,8 @@
 #ifndef BITU_SERVER_H_
 #define BITU_SERVER_H_ 1
 
-void bitu_server_run (void);
+#include <bitu/app.h>
+
+void bitu_server_run (bitu_app_t *app);
 
 #endif /* BITU_SERVER_H_ */

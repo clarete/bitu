@@ -95,6 +95,25 @@ cmd_unload (bitu_app_t *app, char **params, int num_params)
     }
 }
 
+static char *
+cmd_send (bitu_app_t *app, char **params, int num_params)
+{
+  const char *jid, *msg;
+  iks *xmpp_msg;
+  char *error;
+
+  if ((error = _validate_num_params ("send", 2, num_params)) != NULL)
+    return error;
+
+  jid = params[0];
+  msg = params[1];
+
+  xmpp_msg = iks_make_msg (IKS_TYPE_CHAT, jid, msg);
+  ta_xmpp_client_send (app->xmpp, xmpp_msg);
+  iks_delete (xmpp_msg);
+  return NULL;
+}
+
 void
 bitu_server_run (bitu_app_t *app)
 {
@@ -106,6 +125,7 @@ bitu_server_run (bitu_app_t *app)
   commands = hashtable_create (hash_string, string_equal, NULL, NULL);
   hashtable_set (commands, "load", cmd_load);
   hashtable_set (commands, "unload", cmd_unload);
+  hashtable_set (commands, "send", cmd_send);
 
   if ((s = socket (AF_UNIX, SOCK_STREAM, 0)) == -1)
     {

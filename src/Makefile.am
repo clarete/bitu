@@ -4,15 +4,15 @@ libbitu_la_SOURCES = util.c loader.c server.c hashtable.c hashtable.h	\
 libbitu_la_CFLAGS = $(TANINGIA_CFLAGS) $(IKSEMEL_CFLAGS) -I$(top_srcdir)/include
 libbitu_la_LIBADD = $(TANINGIA_LIBS) $(IKSEMEL_LIBS) -ldl
 
-bin_PROGRAMS = bitu bitush
+bin_PROGRAMS = bitu bituctl
 
 bitu_SOURCES = main.c
 bitu_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
 bitu_LDADD = $(TANINGIA_LIBS) ./libbitu.la
 
-bitush_SOURCES = shell.c
-bitush_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
-bitush_LDADD = $(TANINGIA_LIBS) ./libbitu.la -lreadline
+bituctl_SOURCES = shell.c
+bituctl_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
+bituctl_LDADD = $(TANINGIA_LIBS) ./libbitu.la -lreadline
 
 noinst_PROGRAMS = test-plugin test-server test-util
 

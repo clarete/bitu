@@ -16,7 +16,7 @@ Makefile.in
 /missing
 /stamp-h1
 /src/bitu
-/src/bitush
+/src/bituctl
 /src/test-plugin
 /src/test-server
 /src/test-util

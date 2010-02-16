@@ -31,6 +31,7 @@ char *bitu_plugin_message_return (bitu_plugin_t *plugin);
 bitu_plugin_ctx_t *bitu_plugin_ctx_new (void);
 void bitu_plugin_ctx_free (bitu_plugin_ctx_t *plugin_ctx);
 int bitu_plugin_ctx_load (bitu_plugin_ctx_t *plugin_ctx, const char *lib);
+int bitu_plugin_ctx_unload (bitu_plugin_ctx_t *plugin_ctx, const char *lib);
 bitu_plugin_t *bitu_plugin_ctx_find (bitu_plugin_ctx_t *plugin_ctx,
                                      const char *name);
 int bitu_plugin_ctx_load_from_file (bitu_plugin_ctx_t *plugin_ctx,

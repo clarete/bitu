@@ -124,11 +124,23 @@ bitu_plugin_ctx_load (bitu_plugin_ctx_t *plugin_ctx, const char *lib)
     return 0;
   if (hashtable_set (plugin_ctx->plugins,
                      strdup (bitu_plugin_name (plugin)),
-                     plugin))
+                     plugin) == -1)
     {
       bitu_plugin_free (plugin);
       return 0;
     }
+  return 1;
+}
+
+int
+bitu_plugin_ctx_unload (bitu_plugin_ctx_t *plugin_ctx, const char *lib)
+{
+  bitu_plugin_t *plugin;
+  plugin = hashtable_get (plugin_ctx->plugins, lib);
+  if (plugin == NULL)
+    return 0;
+  /* This line will call `bitu_plugin_free()'. Don't do it again! */
+  hashtable_del (plugin_ctx->plugins, lib);
   return 1;
 }
 

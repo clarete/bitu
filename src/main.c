@@ -141,6 +141,7 @@ main (int argc, char **argv)
 {
   /* xmpp stuff */
   bitu_app_t *app;
+  bitu_server_t *server;
   ta_log_t *logger;
   char *jid = NULL, *passwd = NULL, *host = NULL;
   char *plugins_file = NULL;
@@ -260,6 +261,10 @@ main (int argc, char **argv)
   ta_log_set_level (app->logger, log_flags);
   ta_log_set_use_colors (app->logger, 1);
 
+  /* Initializing the local server that will handle configuration
+   * interaction. */
+  server = bitu_server_new ("/tmp/bitu-server.sock", app);
+
   /* Connecting */
   if (!ta_xmpp_client_connect (app->xmpp))
     {
@@ -282,9 +287,11 @@ main (int argc, char **argv)
       return 1;
     }
 
-  bitu_server_run (app);
+  bitu_server_connect (server);
+  bitu_server_run (server);
 
  finalize:
+  bitu_server_free (server);
   bitu_plugin_ctx_free (app->plugin_ctx);
   ta_xmpp_client_free (app->xmpp);
   ta_log_free (app->logger);

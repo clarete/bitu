@@ -19,8 +19,14 @@
 #ifndef BITU_SERVER_H_
 #define BITU_SERVER_H_ 1
 
+#include <sys/types.h>
 #include <bitu/app.h>
 
-void bitu_server_run (bitu_app_t *app);
+typedef struct _bitu_server bitu_server_t;
+
+bitu_server_t *bitu_server_new (const char *sock_path, bitu_app_t *app);
+void bitu_server_free (bitu_server_t *server);
+int bitu_server_connect (bitu_server_t *server);
+void bitu_server_run (bitu_server_t *server);
 
 #endif /* BITU_SERVER_H_ */

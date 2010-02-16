@@ -27,6 +27,7 @@ int
 main (int argc, char **argv)
 {
   bitu_app_t *app;
+  bitu_server_t *server;
 
   /* We actually don't have a constructor (nor destructor) to the app
    * struct.  This is a test program, the only app struct instantiated
@@ -40,13 +41,17 @@ main (int argc, char **argv)
   app->xmpp = ta_xmpp_client_new ("jid@invalid", "fakepasswd", NULL, 5222);
   app->plugin_ctx = bitu_plugin_ctx_new ();
 
+  server = bitu_server_new ("/tmp/bleh.sock", app);
+  bitu_server_connect (server);
+
   /* I don't like this way. I think we should have a
    * `bitu_server_recv()' method and let the user to decide when
    * calling it (to be able to select/polling). Soon it will be
    * done */
-  bitu_server_run (app);
+  bitu_server_run (server);
 
-  /* Time to free everything related to the app stuff. */
+  /* Time to free everything related to the server and app stuff. */
+  bitu_server_free (server);    /* app will not be touched here */
   ta_log_free (app->logger);
   ta_xmpp_client_free (app->xmpp);
   bitu_plugin_ctx_free (app->plugin_ctx);

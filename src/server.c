@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -31,10 +32,17 @@
 #include "hashtable.h"
 #include "hashtable-utils.h"
 
-#define SOCKET_PATH    "/tmp/server.sock"
 #define LISTEN_BACKLOG 1
 
-typedef char * (*command_t) (bitu_app_t *, char **, int);
+typedef char * (*command_t) (bitu_server_t *, char **, int);
+
+struct _bitu_server
+{
+  char *sock_path;
+  bitu_app_t *app;
+  unsigned int sock;
+  hashtable_t *commands;
+};
 
 static char *
 _validate_num_params (const char *cmd, int x, int y)
@@ -50,7 +58,7 @@ _validate_num_params (const char *cmd, int x, int y)
 }
 
 static char *
-cmd_load (bitu_app_t *app, char **params, int num_params)
+cmd_load (bitu_server_t *server, char **params, int num_params)
 {
   size_t fullsize;
   char *libname;
@@ -64,39 +72,40 @@ cmd_load (bitu_app_t *app, char **params, int num_params)
     return NULL;
 
   snprintf (libname, fullsize, "lib%s.so", params[0]);
-  if (bitu_plugin_ctx_load (app->plugin_ctx, libname))
+  if (bitu_plugin_ctx_load (server->app->plugin_ctx, libname))
     {
-      ta_log_info (app->logger, "Plugin %s loaded", libname);
+      ta_log_info (server->app->logger, "Plugin %s loaded", libname);
       return NULL;
     }
   else
     {
-      ta_log_warn (app->logger, "Failed to load plugin %s", libname);
+      ta_log_warn (server->app->logger, "Failed to load plugin %s", libname);
       return strdup ("Unable to load module");
     }
 }
 
 static char *
-cmd_unload (bitu_app_t *app, char **params, int num_params)
+cmd_unload (bitu_server_t *server, char **params, int num_params)
 {
   char *error;
   if ((error = _validate_num_params ("unload", 1, num_params)) != NULL)
     return error;
 
-  if (bitu_plugin_ctx_unload (app->plugin_ctx, params[0]))
+  if (bitu_plugin_ctx_unload (server->app->plugin_ctx, params[0]))
     {
-      ta_log_info (app->logger, "Plugin %s unloaded", params[0]);
+      ta_log_info (server->app->logger, "Plugin %s unloaded", params[0]);
       return NULL;
     }
   else
     {
-      ta_log_warn (app->logger, "Failed to unload plugin %s", params[0]);
+      ta_log_warn (server->app->logger, "Failed to unload plugin %s",
+                   params[0]);
       return strdup ("Unable to unload module");
     }
 }
 
 static char *
-cmd_send (bitu_app_t *app, char **params, int num_params)
+cmd_send (bitu_server_t *server, char **params, int num_params)
 {
   const char *jid, *msg;
   iks *xmpp_msg;
@@ -109,39 +118,80 @@ cmd_send (bitu_app_t *app, char **params, int num_params)
   msg = params[1];
 
   xmpp_msg = iks_make_msg (IKS_TYPE_CHAT, jid, msg);
-  ta_xmpp_client_send (app->xmpp, xmpp_msg);
+  ta_xmpp_client_send (server->app->xmpp, xmpp_msg);
   iks_delete (xmpp_msg);
   return NULL;
 }
 
+/* Public API */
+
+bitu_server_t *
+bitu_server_new (const char *sock_path, bitu_app_t *app)
+{
+  bitu_server_t *server;
+  if ((server = malloc (sizeof (bitu_server_t))) == NULL)
+    return NULL;
+  server->sock_path = strdup (sock_path);
+  server->app = app;
+  server->commands = hashtable_create (hash_string, string_equal, NULL, NULL);
+
+  /* Registering commands */
+  hashtable_set (server->commands, "load", cmd_load);
+  hashtable_set (server->commands, "unload", cmd_unload);
+  hashtable_set (server->commands, "send", cmd_send);
+  return server;
+}
+
 void
-bitu_server_run (bitu_app_t *app)
+bitu_server_free (bitu_server_t *server)
+{
+  hashtable_destroy (server->commands);
+  free (server->sock_path);
+  free (server);
+}
+
+int
+bitu_server_connect (bitu_server_t *server)
 {
   int len;
-  unsigned int s, s2;
-  struct sockaddr_un local, remote;
-  hashtable_t *commands;
+  struct sockaddr_un local;
 
-  commands = hashtable_create (hash_string, string_equal, NULL, NULL);
-  hashtable_set (commands, "load", cmd_load);
-  hashtable_set (commands, "unload", cmd_unload);
-  hashtable_set (commands, "send", cmd_send);
-
-  if ((s = socket (AF_UNIX, SOCK_STREAM, 0)) == -1)
+  if ((server->sock = socket (AF_UNIX, SOCK_STREAM, 0)) == -1)
     {
-      ta_log_critical (app->logger, "Unable to open socket server");
-      exit (EXIT_FAILURE);
+      ta_log_critical (server->app->logger, "Unable to open socket server");
+      return 0;
     }
 
   local.sun_family = AF_UNIX;
-  strcpy (local.sun_path, SOCKET_PATH);
+  strcpy (local.sun_path, server->sock_path);
   unlink (local.sun_path);
 
   len = strlen (local.sun_path) + sizeof (local.sun_family);
-  bind (s, (struct sockaddr *) &local, len);
-  listen (s, LISTEN_BACKLOG);
+  if (bind (server->sock, (struct sockaddr *) &local, len) == -1)
+    {
+      ta_log_critical (server->app->logger,
+                       "Error when binding to socket %s: %s",
+                       server->sock_path,
+                       strerror (errno));
+      return 0;
+    }
+  if (listen (server->sock, LISTEN_BACKLOG) == -1)
+    {
+      ta_log_critical (server->app->logger,
+                       "Error to listen to connections: %s",
+                       strerror (errno));
+      return 0;
+    }
 
-  ta_log_info (app->logger, "Local server is waiting for connections");
+  ta_log_info (server->app->logger, "Local server is waiting for connections");
+  return 1;
+}
+
+void
+bitu_server_run (bitu_server_t *server)
+{
+  unsigned int sock;
+  struct sockaddr_un remote;
 
   while (1)
     {
@@ -152,8 +202,8 @@ bitu_server_run (bitu_app_t *app)
       int num_params;
 
       len = sizeof (struct sockaddr_un);
-      s2 = accept (s, (struct sockaddr *) &remote, &len);
-      ta_log_info (app->logger, "Client connected");
+      sock = accept (server->sock, (struct sockaddr *) &remote, &len);
+      ta_log_info (server->app->logger, "Client connected");
 
       while (!done)
         {
@@ -162,7 +212,7 @@ bitu_server_run (bitu_app_t *app)
           char *answer;
           command_t command;
 
-          n = recv (s2, str, 100, 0);
+          n = recv (sock, str, 100, 0);
           if (n <= 0)
             {
               done = 1;
@@ -175,13 +225,13 @@ bitu_server_run (bitu_app_t *app)
             {
               msg_size =
                 snprintf (answer, msgbufsize, "Command seems to be empty");
-              ta_log_warn (app->logger, answer);
+              ta_log_warn (server->app->logger, answer);
             }
-          else if ((command = hashtable_get (commands, cmd)) == NULL)
+          else if ((command = hashtable_get (server->commands, cmd)) == NULL)
             {
               msg_size =
                 snprintf (answer, msgbufsize, "Command `%s' not found", cmd);
-              ta_log_warn (app->logger, answer);
+              ta_log_warn (server->app->logger, answer);
             }
           /*
           else if (command.num_params != num_params)
@@ -190,12 +240,12 @@ bitu_server_run (bitu_app_t *app)
                 snprintf (answer, msgbufsize,
                           "Command `%s' waits for %d args but %d were passed",
                           cmd, command.num_params, num_params);
-              ta_log_warn (app->logger, answer);
+              ta_log_warn (server->app->logger, answer);
             }
           */
           else
             {
-              answer = command (app, params, num_params);
+              answer = command (server, params, num_params);
               if (answer != NULL)
                 msg_size = strlen (answer);
               else
@@ -205,7 +255,7 @@ bitu_server_run (bitu_app_t *app)
                   msg_size = 1;
                 }
             }
-          send (s2, answer, msg_size, 0);
+          send (sock, answer, msg_size, 0);
           if (answer)
             free (answer);
         }

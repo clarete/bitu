@@ -34,18 +34,40 @@
 #define SOCKET_PATH    "/tmp/server.sock"
 #define LISTEN_BACKLOG 1
 
-typedef char * (*command_t) (bitu_app_t *, char **);
+typedef char * (*command_t) (bitu_app_t *, char **, int);
 
 static char *
-cmd_load (bitu_app_t *app, char **params)
+_validate_num_params (const char *cmd, int x, int y)
 {
-  size_t fullsize = strlen (params[0]) + 7; /* lib${bleh}.so\0 */
-  char libname[fullsize];
+  if (x != y)
+    {
+      char *error = malloc (128);
+      snprintf (error, 128, "Command `%s' takes %d param(s), %d given",
+                cmd, x, y);
+      return error;
+    }
+  return NULL;
+}
+
+static char *
+cmd_load (bitu_app_t *app, char **params, int num_params)
+{
+  size_t fullsize;
+  char *libname;
+  char *error;
+
+  if ((error = _validate_num_params ("load", 1, num_params)) != NULL)
+    return error;
+
+  fullsize = strlen (params[0]) + 7; /* lib${bleh}.so\0 */
+  if ((libname = malloc (fullsize)) == NULL)
+    return NULL;
+
   snprintf (libname, fullsize, "lib%s.so", params[0]);
   if (bitu_plugin_ctx_load (app->plugin_ctx, libname))
     {
       ta_log_info (app->logger, "Plugin %s loaded", libname);
-      return strdup ("Plugin loaded");
+      return NULL;
     }
   else
     {
@@ -55,12 +77,16 @@ cmd_load (bitu_app_t *app, char **params)
 }
 
 static char *
-cmd_unload (bitu_app_t *app, char **params)
+cmd_unload (bitu_app_t *app, char **params, int num_params)
 {
+  char *error;
+  if ((error = _validate_num_params ("unload", 1, num_params)) != NULL)
+    return error;
+
   if (bitu_plugin_ctx_unload (app->plugin_ctx, params[0]))
     {
       ta_log_info (app->logger, "Plugin %s unloaded", params[0]);
-      return strdup ("Plugin unloaded");
+      return NULL;
     }
   else
     {
@@ -149,11 +175,19 @@ bitu_server_run (bitu_app_t *app)
           */
           else
             {
-              answer = command (app, params);
-              msg_size = strlen (answer);
+              answer = command (app, params, num_params);
+              if (answer != NULL)
+                msg_size = strlen (answer);
+              else
+                {
+                  answer = malloc (1);
+                  memset (answer, 0, 1);
+                  msg_size = 1;
+                }
             }
           send (s2, answer, msg_size, 0);
-          free (answer);
+          if (answer)
+            free (answer);
         }
     }
 }

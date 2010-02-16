@@ -21,6 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <readline/readline.h>
@@ -90,7 +91,7 @@ main (int argc, char **argv)
       char *line;
       char *line_stripped;
       char str[100];
-      int n;
+      ssize_t n;
 
       /* Main readline call.*/
       line = readline (PS1);
@@ -139,8 +140,11 @@ main (int argc, char **argv)
 
       /* Receiving the answer from the server */
       n = recv (s, str, 100, 0);
-      str[n] = '\0';
-      printf ("%s\n", str);
+      if (n > 1)
+        {
+          str[n] = '\0';
+          printf ("%s\n", str);
+        }
     }
 
   close (s);

@@ -89,6 +89,8 @@ main (int argc, char **argv)
     {
       char *line;
       char *line_stripped;
+      char str[100];
+      int n;
 
       /* Main readline call.*/
       line = readline (PS1);
@@ -103,7 +105,7 @@ main (int argc, char **argv)
       line_stripped = bitu_util_strstrip (line);
 
       if (strlen (line_stripped) == 0)
-        break;
+        continue;
       else
         {
           /* strtok modifies its first param */
@@ -134,6 +136,11 @@ main (int argc, char **argv)
           free (line_tok);
         }
       free (line);
+
+      /* Receiving the answer from the server */
+      n = recv (s, str, 100, 0);
+      str[n] = '\0';
+      printf ("%s\n", str);
     }
 
   close (s);

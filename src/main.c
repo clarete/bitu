@@ -23,6 +23,7 @@
 #include <getopt.h>
 #include <iksemel.h>
 #include <taningia/taningia.h>
+#include <bitu/app.h>
 #include <bitu/util.h>
 #include <bitu/loader.h>
 #include <bitu/server.h>
@@ -139,11 +140,12 @@ int
 main (int argc, char **argv)
 {
   /* xmpp stuff */
-  ta_xmpp_client_t *xmpp;
+  bitu_app_t *app;
   ta_log_t *logger;
   char *jid = NULL, *passwd = NULL, *host = NULL;
   char *plugins_file = NULL;
   int port = 5222;
+  int log_flags;
 
   /* getopt stuff */
   int c;
@@ -156,8 +158,6 @@ main (int argc, char **argv)
     { "help", no_argument, NULL, 'h' },
     { 0, 0, 0, 0 }
   };
-
-  bitu_plugin_ctx_t *plugin_ctx;
 
   while ((c = getopt_long (argc, argv, "j:p:H:P:", long_options, NULL)) != -1)
     {
@@ -208,73 +208,87 @@ main (int argc, char **argv)
       iks_stack_delete (stack);
     }
 
+  /* Allocing the application context */
+  if ((app = malloc (sizeof (bitu_app_t))) == NULL)
+    return EXIT_FAILURE;
+
   /* Preparing the plugin context */
-  plugin_ctx = bitu_plugin_ctx_new ();
+  app->plugin_ctx = bitu_plugin_ctx_new ();
 
   /* Loading default plugins from a file */
   if (plugins_file != NULL)
     {
-      if (!bitu_plugin_ctx_load_from_file (plugin_ctx, plugins_file))
+      if (!bitu_plugin_ctx_load_from_file (app->plugin_ctx, plugins_file))
         fprintf (stderr, "Error loading plugins from file\n");
       free (plugins_file);
     }
 
   /* Configuring xmpp client */
-  xmpp = ta_xmpp_client_new (jid, passwd, host, port);
+  app->xmpp = ta_xmpp_client_new (jid, passwd, host, port);
 
   free (jid);
   free (passwd);
   free (host);
 
-  ta_xmpp_client_event_connect (xmpp, "connected",
+  ta_xmpp_client_event_connect (app->xmpp, "connected",
                                 (ta_xmpp_client_hook_t) connected_cb,
                                 NULL);
-  ta_xmpp_client_event_connect (xmpp, "authenticated",
+  ta_xmpp_client_event_connect (app->xmpp, "authenticated",
                                 (ta_xmpp_client_hook_t) auth_cb,
                                 NULL);
-  ta_xmpp_client_event_connect (xmpp, "authentication-failed",
+  ta_xmpp_client_event_connect (app->xmpp, "authentication-failed",
                                 (ta_xmpp_client_hook_t) auth_failed_cb,
                                 NULL);
-  ta_xmpp_client_event_connect (xmpp, "message-received",
+  ta_xmpp_client_event_connect (app->xmpp, "message-received",
                                 (ta_xmpp_client_hook_t) message_received_cb,
-                                plugin_ctx);
-  ta_xmpp_client_event_connect (xmpp, "presence-noticed",
+                                app->plugin_ctx);
+  ta_xmpp_client_event_connect (app->xmpp, "presence-noticed",
                                 (ta_xmpp_client_hook_t) presence_noticed_cb,
-                                plugin_ctx);
+                                app->plugin_ctx);
 
   /* Configuring logging stuff */
-  logger = ta_xmpp_client_get_logger (xmpp);
-  ta_log_set_level (logger, ta_log_get_level (logger) |
-                    TA_LOG_INFO | TA_LOG_DEBUG);
+  log_flags = TA_LOG_INFO | TA_LOG_WARN | TA_LOG_DEBUG |
+    TA_LOG_CRITICAL | TA_LOG_ERROR;
+
+  /* xmpp client logger */
+  logger = ta_xmpp_client_get_logger (app->xmpp);
+  ta_log_set_level (logger, log_flags);
   ta_log_set_use_colors (logger, 1);
 
+  /* main application logger */
+  app->logger = ta_log_new ("bitu-main");
+  ta_log_set_level (app->logger, log_flags);
+  ta_log_set_use_colors (app->logger, 1);
+
   /* Connecting */
-  if (!ta_xmpp_client_connect (xmpp))
+  if (!ta_xmpp_client_connect (app->xmpp))
     {
       ta_error_t *error;
-      error = ta_xmpp_client_get_error (xmpp);
+      error = ta_xmpp_client_get_error (app->xmpp);
       fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
                ta_error_get_message (error));
-      bitu_plugin_ctx_free (plugin_ctx);
-      ta_xmpp_client_free (xmpp);
+      goto finalize;
       return 1;
     }
 
   /* Running client */
-  if (!ta_xmpp_client_run (xmpp, 1))
+  if (!ta_xmpp_client_run (app->xmpp, 1))
     {
       ta_error_t *error;
-      error = ta_xmpp_client_get_error (xmpp);
+      error = ta_xmpp_client_get_error (app->xmpp);
       fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
                ta_error_get_message (error));
-      bitu_plugin_ctx_free (plugin_ctx);
-      ta_xmpp_client_free (xmpp);
+      goto finalize;
       return 1;
     }
 
   bitu_server_run ();
 
-  bitu_plugin_ctx_free (plugin_ctx);
-  ta_xmpp_client_free (xmpp);
+ finalize:
+  bitu_plugin_ctx_free (app->plugin_ctx);
+  ta_xmpp_client_free (app->xmpp);
+  ta_log_free (app->logger);
+  free (app);
+
   return 0;
 }

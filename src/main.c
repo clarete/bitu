@@ -27,6 +27,7 @@
 #include <bitu/util.h>
 #include <bitu/loader.h>
 #include <bitu/server.h>
+#include <bitu/conf.h>
 
 static int
 connected_cb (ta_xmpp_client_t *client, void *data)
@@ -132,7 +133,7 @@ presence_noticed_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 static void
 usage (const char *prname)
 {
-  printf ("Usage: %s --jid=JID --password=PASSWD [--host=HOST, --port=PORT, --plugins-file=PFILE]\n",
+  printf ("Usage: %s [--jid=JID --password=PASSWD --host=HOST, --port=PORT, --config-file=FILE]\n",
           prname);
 }
 
@@ -143,9 +144,11 @@ main (int argc, char **argv)
   bitu_app_t *app;
   bitu_server_t *server;
   ta_log_t *logger;
+  ta_list_t *conf;
+  ta_list_t *commands = NULL, *tmp = NULL;
   char *jid = NULL, *passwd = NULL, *host = NULL;
-  char *plugins_file = NULL;
-  int port = 5222;
+  char *config_file = NULL, *sock_path = NULL;
+  int port = 0;
   int log_flags;
 
   /* getopt stuff */
@@ -153,14 +156,15 @@ main (int argc, char **argv)
   static struct option long_options[] = {
     { "jid", required_argument, NULL, 'j' },
     { "password", required_argument, NULL, 'p' },
-    { "host", optional_argument, NULL, 'H' },
-    { "port", optional_argument, NULL, 'P' },
-    { "plugins-file", optional_argument, NULL, 'f' },
+    { "host", required_argument, NULL, 'H' },
+    { "port", required_argument, NULL, 'P' },
+    { "config-file", optional_argument, NULL, 'c' },
     { "help", no_argument, NULL, 'h' },
     { 0, 0, 0, 0 }
   };
 
-  while ((c = getopt_long (argc, argv, "j:p:H:P:", long_options, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "j:p:H:P:c:",
+                           long_options, NULL)) != -1)
     {
       switch (c)
         {
@@ -180,8 +184,8 @@ main (int argc, char **argv)
           port = atoi (optarg);
           break;
 
-        case 'f':
-          plugins_file = strdup (optarg);
+        case 'c':
+          config_file = strdup (optarg);
           break;
 
         case 'h':
@@ -195,10 +199,38 @@ main (int argc, char **argv)
         }
     }
 
+  /* Reading configuration from file */
+  if (config_file != NULL)
+    {
+      if ((conf = bitu_conf_read_from_file (config_file)) == NULL)
+        {
+          exit (EXIT_FAILURE);
+        }
+      for (tmp = conf; tmp; tmp = tmp->next)
+        {
+          bitu_conf_entry_t *entry;
+          entry = tmp->data;
+          if (strcmp (entry->cmd, "jid") == 0 && jid == NULL)
+            jid = entry->params[0];
+          else if (strcmp (entry->cmd, "password") == 0 && passwd == NULL)
+            passwd = entry->params[0];
+          else if (strcmp (entry->cmd, "host") == 0 && host == NULL)
+            host = entry->params[0];
+          else if (strcmp (entry->cmd, "port") == 0 && port == 0)
+            port = atoi (entry->params[0]);
+          else if (strcmp (entry->cmd, "server-sock-path") == 0)
+            sock_path = entry->params[0];
+          else
+            commands = ta_list_append (commands, entry);
+        }
+      free (config_file);
+    }
+
   /* Some param validation */
   if (jid == NULL || passwd == NULL)
     {
       usage (argv[0]);
+      ta_list_free (commands);
       exit (EXIT_FAILURE);
     }
   if (host == NULL)
@@ -208,21 +240,18 @@ main (int argc, char **argv)
       host = strdup (id->server);
       iks_stack_delete (stack);
     }
+  if (port == 0)
+    port = 5222;                /* Default xmpp port */
 
-  /* Allocing the application context */
+  /* Allocating the application context */
   if ((app = malloc (sizeof (bitu_app_t))) == NULL)
-    return EXIT_FAILURE;
+    {
+      ta_list_free (commands);
+      exit (EXIT_FAILURE);
+    }
 
   /* Preparing the plugin context */
   app->plugin_ctx = bitu_plugin_ctx_new ();
-
-  /* Loading default plugins from a file */
-  if (plugins_file != NULL)
-    {
-      if (!bitu_plugin_ctx_load_from_file (app->plugin_ctx, plugins_file))
-        fprintf (stderr, "Error loading plugins from file\n");
-      free (plugins_file);
-    }
 
   /* Configuring xmpp client */
   app->xmpp = ta_xmpp_client_new (jid, passwd, host, port);
@@ -263,7 +292,16 @@ main (int argc, char **argv)
 
   /* Initializing the local server that will handle configuration
    * interaction. */
-  server = bitu_server_new ("/tmp/bitu-server.sock", app);
+  server = bitu_server_new (sock_path, app);
+
+  /* Running all commands found in the config file. */
+  for (tmp = commands; tmp; tmp = tmp->next)
+    {
+      bitu_conf_entry_t *entry;
+      entry = (bitu_conf_entry_t *) tmp->data;
+      bitu_server_exec_cmd (server, entry->cmd, entry->params, entry->nparams);
+    }
+  ta_list_free (commands);
 
   /* Connecting */
   if (!ta_xmpp_client_connect (app->xmpp))

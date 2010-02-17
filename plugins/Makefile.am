@@ -1,1 +1,1 @@
-SUBDIRS = processor uptime
+SUBDIRS = cpuinfo uptime

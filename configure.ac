@@ -39,7 +39,7 @@ AC_CONFIG_FILES([
         include/bitu/Makefile
         src/Makefile
         plugins/Makefile
-        plugins/processor/Makefile
+        plugins/cpuinfo/Makefile
         plugins/uptime/Makefile
 ])
 

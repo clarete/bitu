@@ -1,4 +1,4 @@
-/* processor.c - This file is part of the bitu program
+/* cpuinfo.c - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -22,36 +22,36 @@
 #include <bitu/util.h>
 #include <iksemel.h>
 
-#include "processor.h"
+#include "cpuinfo.h"
 
 #define LINELEN_MAX     255
 
 static void
-processor_free (processor_t *processor)
+cpuinfo_free (cpuinfo_t *cpuinfo)
 {
-  free (processor->vendor_id);
-  free (processor->model);
-  free (processor);
+  free (cpuinfo->vendor_id);
+  free (cpuinfo->model);
+  free (cpuinfo);
 }
 
 /* Reads information present in /proc/cpuinfo. */
-static processor_t **
-processor_read_cpuinfo (int *num)
+static cpuinfo_t **
+cpuinfo_read_cpuinfo (int *num)
 {
   FILE *fd;
   char line[LINELEN_MAX];
-  processor_t **processors;
+  cpuinfo_t **cpuinfos;
   int counter = 0;
 
   fd = fopen ("/proc/cpuinfo", "r");
   if (fd == NULL)
     return NULL;
 
-  processors = malloc (sizeof (processor_t));
+  cpuinfos = malloc (sizeof (cpuinfo_t));
 
   while (fgets (line, LINELEN_MAX, fd))
     {
-      processor_t *processor;
+      cpuinfo_t *cpuinfo;
       char *key, *val;
       key = strtok (line, ":");
       val = strtok (NULL, "\n");
@@ -61,21 +61,21 @@ processor_read_cpuinfo (int *num)
           char *skey = bitu_util_strstrip (key);
           if (strcmp (skey, "processor") == 0)
             {
-              processor = malloc (sizeof (processor_t));
-              processor->number = atoi (bitu_util_strstrip (val));
-              processors = realloc (processors,
-                                    sizeof (processor_t) * (counter+1));
-              processors[counter] = processor;
+              cpuinfo = malloc (sizeof (cpuinfo_t));
+              cpuinfo->number = atoi (bitu_util_strstrip (val));
+              cpuinfos = realloc (cpuinfos,
+                                    sizeof (cpuinfo_t) * (counter+1));
+              cpuinfos[counter] = cpuinfo;
               counter++;
             }
           else if (strcmp (skey, "vendor_id") == 0)
-            processor->vendor_id = strdup (bitu_util_strstrip (val));
+            cpuinfo->vendor_id = strdup (bitu_util_strstrip (val));
           else if (strcmp (skey, "model name") == 0)
-            processor->model = strdup (bitu_util_strstrip (val));
+            cpuinfo->model = strdup (bitu_util_strstrip (val));
           else if (strcmp (skey, "cpu MHz") == 0)
-            processor->clock = atof (bitu_util_strstrip (val));
+            cpuinfo->clock = atof (bitu_util_strstrip (val));
           else if (strcmp (skey, "cache size") == 0)
-            processor->cache_size = atoi (bitu_util_strstrip (val));
+            cpuinfo->cache_size = atoi (bitu_util_strstrip (val));
         }
     }
 
@@ -83,16 +83,16 @@ processor_read_cpuinfo (int *num)
 
   if (num)
     *num = counter;
-  return processors;
+  return cpuinfos;
 }
 
 static void
-processor_free_cpuinfo (processor_t **processors, int num)
+cpuinfo_free_cpuinfo (cpuinfo_t **cpuinfos, int num)
 {
   int i;
   for (i = 0; i < num; i++)
-    processor_free (processors[i]);
-  free (processors);
+    cpuinfo_free (cpuinfos[i]);
+  free (cpuinfos);
 }
 
 
@@ -116,10 +116,10 @@ plugin_message_return (void)
 {
   char *ret = NULL;
   int num_procs, i;
-  processor_t **processors;
+  cpuinfo_t **processors;
   int total_size = 0;
 
-  processors = processor_read_cpuinfo (&num_procs);
+  processors = cpuinfo_read_cpuinfo (&num_procs);
   for (i = 0; i < num_procs; i++)
     {
       char *np, *proc;
@@ -127,18 +127,18 @@ plugin_message_return (void)
 
       if ((proc = malloc (size)) == NULL)
         {
-          processor_free_cpuinfo (processors, num_procs);
+          cpuinfo_free_cpuinfo (processors, num_procs);
           return NULL;
         }
 
-      /* This while builds a single processor string. The `proc' var
+      /* This while builds a single cpuinfo string. The `proc' var
        * will be concatenated to the `ret' string after that. This is
        * done to make sure that enought space will be alocated to each
-       * processor info.*/
+       * cpuinfo info.*/
       while (1)
         {
           n = snprintf (proc, size,
-                        "Processor %d\n"
+                        "Cpuinfo %d\n"
                         "Vendor ID: %s\n"
                         "Model: %s\n"
                         "Clock: %f\n"
@@ -164,7 +164,7 @@ plugin_message_return (void)
             size *= 2;
           if ((np = realloc (proc, size)) == NULL)
             {
-              processor_free_cpuinfo (processors, num_procs);
+              cpuinfo_free_cpuinfo (processors, num_procs);
               free (proc);
               return NULL;
             }
@@ -172,7 +172,7 @@ plugin_message_return (void)
             proc = np;
         }
 
-      /* Time to concat the current processor to the main info
+      /* Time to concat the current cpuinfo to the main info
        * string */
       if (ret == NULL)          /* First one */
         ret = strdup (proc);
@@ -183,7 +183,7 @@ plugin_message_return (void)
             {
               free (proc);
               free (ret);
-              processor_free_cpuinfo (processors, num_procs);
+              cpuinfo_free_cpuinfo (processors, num_procs);
               return NULL;
             }
           else
@@ -192,6 +192,6 @@ plugin_message_return (void)
         }
       free (proc);
     }
-  processor_free_cpuinfo (processors, num_procs);
+  cpuinfo_free_cpuinfo (processors, num_procs);
   return ret;
 }

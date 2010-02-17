@@ -1,4 +1,4 @@
-/* processor.h - This file is part of the bitu program
+/* test.c - This file is part of the bitu program
  *
  * Copyright (C) 2010  Lincoln de Sousa <lincoln@comum.org>
  *
@@ -16,21 +16,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef BITU_PROCESSOR_H_
-#define BITU_PROCESSOR_H_ 1
+#include <stdio.h>
+#include <stdlib.h>
+#include "cpuinfo.h"
 
-typedef struct {
-  int number;
-  char *vendor_id;
-  char *model;
-  float clock;                  /* MHz */
-  int cache_size;               /* KB */
-} processor_t;
-
-const char *plugin_name (void);
-
-int plugin_num_params (void);
-
-char *plugin_message_return (void);
-
-#endif /* BITU_PROCESSOR_H_ */
+int
+main (int argc, char **argv)
+{
+  char *info = plugin_message_return ();
+  printf (info);
+  free (info);
+  return 0;
+}

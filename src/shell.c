@@ -139,11 +139,14 @@ main (int argc, char **argv)
       free (line);
 
       /* Receiving the answer from the server */
-      n = recv (s, str, 100, 0);
-      if (n > 1)
+      if (running)
         {
-          str[n] = '\0';
-          printf ("%s\n", str);
+          n = recv (s, str, 100, 0);
+          if (n > 1)
+            {
+              str[n] = '\0';
+              printf ("%s\n", str);
+            }
         }
     }
 

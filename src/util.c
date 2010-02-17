@@ -60,8 +60,6 @@ bitu_util_extract_params (const char *line, char **cmd,
       char **tmp;
       char *param = strtok (NULL, " ");
       size_t elen = (sizeof (char *) * (counter+1));
-      if (param == NULL)
-        break;
       if ((tmp = realloc (eparams, elen)) == NULL)
         {
           free (body);
@@ -69,6 +67,11 @@ bitu_util_extract_params (const char *line, char **cmd,
         }
       else
         eparams = tmp;
+      if (param == NULL)
+        {
+          eparams[counter] = NULL;
+          break;
+        }
       eparams[counter] = strdup (param);
       counter++;
     }

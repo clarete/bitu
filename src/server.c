@@ -190,6 +190,17 @@ bitu_server_connect (bitu_server_t *server)
 }
 
 void
+bitu_server_exec_cmd (bitu_server_t *server, const char *cmd,
+                      char **params, int nparams)
+{
+  command_t command;
+  if ((command = hashtable_get (server->commands, cmd)) == NULL)
+    ta_log_warn (server->app->logger, "Command `%s' not found", cmd);
+  else
+    command (server, params, nparams);
+}
+
+void
 bitu_server_run (bitu_server_t *server)
 {
   unsigned int sock;

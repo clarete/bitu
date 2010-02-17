@@ -123,6 +123,88 @@ cmd_send (bitu_server_t *server, char **params, int num_params)
   return NULL;
 }
 
+static char *
+cmd_list (bitu_server_t *server, char **params, int num_params)
+{
+  char *action, *ret;
+  char *error;
+  if ((error = _validate_num_params ("list", 1, num_params)) != NULL)
+    return error;
+
+  ret = NULL;
+  action = params[0];
+  if (strcmp (action, "plugins") == 0)
+    {
+      ta_list_t *plugins, *tmp;
+      char *val, *tmp_val, *current_pos_str;
+      size_t val_size, current_pos, full_size = 0;
+      plugins = bitu_plugin_ctx_get_list (server->app->plugin_ctx);
+      for (tmp = plugins; tmp; tmp = tmp->next)
+        {
+          val = tmp->data;
+
+          /* This +1 means the \n at the end of each line. */
+          val_size = strlen (val) + 1;
+
+          /* Remembering current end of the full string. */
+          current_pos = full_size;
+          full_size += val_size;
+
+          if ((tmp_val = realloc (ret, full_size)) == NULL)
+            {
+              free (ret);
+              return NULL;
+            }
+          else
+            ret = tmp_val;
+
+          current_pos_str = ret + current_pos;
+          memcpy (current_pos_str, val, val_size);
+          memcpy (current_pos_str + val_size - 1, "\n", 1);
+        }
+
+      /* Removing the last \n. It is not needed in the end of the
+       * string */
+      memcpy (ret + full_size - 1, "\b", 1);
+      ta_list_free (plugins);
+    }
+  else if (strcmp (action, "commands") == 0)
+    {
+      void *iter;
+      char *val, *tmp, *current_pos_str;
+      size_t val_size, current_pos, full_size = 0;
+      iter = hashtable_iter (server->commands);
+      do
+        {
+          val = hashtable_iter_key (iter);
+
+          /* This +1 means the \n at the end of each line. */
+          val_size = strlen (val) + 1;
+
+          /* Remembering current end of the full string. */
+          current_pos = full_size;
+          full_size += val_size;
+
+          if ((tmp = realloc (ret, full_size)) == NULL)
+            {
+              free (ret);
+              return NULL;
+            }
+          else
+            ret = tmp;
+
+          current_pos_str = ret + current_pos;
+          memcpy (current_pos_str, val, val_size);
+          memcpy (current_pos_str + val_size - 1, "\n", 1);
+        }
+      while ((iter = hashtable_iter_next (server->commands, iter)));
+
+      /* Removing the last \n. It is not needed in the end of the string */
+      memcpy (ret + full_size - 1, "\b", 1);
+    }
+  return ret;
+}
+
 /* Public API */
 
 bitu_server_t *
@@ -139,6 +221,7 @@ bitu_server_new (const char *sock_path, bitu_app_t *app)
   hashtable_set (server->commands, "load", cmd_load);
   hashtable_set (server->commands, "unload", cmd_unload);
   hashtable_set (server->commands, "send", cmd_send);
+  hashtable_set (server->commands, "list", cmd_list);
   return server;
 }
 

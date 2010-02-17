@@ -150,6 +150,18 @@ bitu_plugin_ctx_find (bitu_plugin_ctx_t *plugin_ctx, const char *name)
   return hashtable_get (plugin_ctx->plugins, name);
 }
 
+ta_list_t *
+bitu_plugin_ctx_get_list (bitu_plugin_ctx_t *plugin_ctx)
+{
+  void *iter;
+  ta_list_t *ret = NULL;
+  iter = hashtable_iter (plugin_ctx->plugins);
+  do
+    ret = ta_list_append (ret, hashtable_iter_key (iter));
+  while ((iter = hashtable_iter_next (plugin_ctx->plugins, iter)));
+  return ret;
+}
+
 int
 bitu_plugin_ctx_load_from_file (bitu_plugin_ctx_t *plugin_ctx,
                                 const char *fname)

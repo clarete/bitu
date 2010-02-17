@@ -17,8 +17,8 @@ bituctl_LDADD = $(TANINGIA_LIBS) ./libbitu.la -lreadline
 noinst_PROGRAMS = test-plugin test-server test-util test-conf
 
 test_plugin_SOURCES = test-plugin.c
-test_plugin_CFLAGS = -I$(top_srcdir)/include
-test_plugin_LDADD = ./libbitu.la -ldl
+test_plugin_CFLAGS =  $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
+test_plugin_LDADD = $(TANINGIA_LIBS) ./libbitu.la -ldl
 
 test_server_SOURCES = test-server.c
 test_server_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include

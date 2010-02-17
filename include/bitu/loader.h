@@ -19,6 +19,8 @@
 #ifndef BITU_LOADER_H_
 #define BITU_LOADER_H_ 1
 
+#include <taningia/taningia.h>
+
 typedef struct bitu_plugin bitu_plugin_t;
 typedef struct bitu_plugin_ctx bitu_plugin_ctx_t;
 
@@ -34,6 +36,7 @@ int bitu_plugin_ctx_load (bitu_plugin_ctx_t *plugin_ctx, const char *lib);
 int bitu_plugin_ctx_unload (bitu_plugin_ctx_t *plugin_ctx, const char *lib);
 bitu_plugin_t *bitu_plugin_ctx_find (bitu_plugin_ctx_t *plugin_ctx,
                                      const char *name);
+ta_list_t *bitu_plugin_ctx_get_list (bitu_plugin_ctx_t *plugin_ctx);
 int bitu_plugin_ctx_load_from_file (bitu_plugin_ctx_t *plugin_ctx,
                                     const char *fname);
 

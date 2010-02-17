@@ -71,8 +71,8 @@ Now follow the next stuff to install taningia.
 
  But wait! If you're planning to use this library and never see a
  bug... you should give up right now (just joking =D). But it is wise
- to compile it with debug support. To do it, execute the following
- command::
+ to compile it with debug support when writting applications based on
+ it. To do it, execute the following command::
 
      $ make CFLAGS="-g -O0 -DDEBUG"
 

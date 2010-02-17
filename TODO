@@ -7,6 +7,9 @@ order that they will be implemented.
 One day, this file will be deleted and these entries will become
 tickets in a bts, I hope.
 
+Core
+----
+
  * Change extract_params to read stuff withing "" as a single param
 
  * Call server commands from bituctl out of the shell via command line
@@ -14,6 +17,9 @@ tickets in a bts, I hope.
  * Implement a loader switch
 
  * Implement a python loader
+
+ * Write a simple python client to be able to send stuff to the
+   server via API.
 
  * Auto accept users that add the bot
 
@@ -35,3 +41,26 @@ tickets in a bts, I hope.
  * Separate the server_run func in _recv and _send funcs
 
  * Catch SIGINT and gracefully stop the bot.
+
+ * Write a man page
+
+ * Improve the `usage()' function.
+
+ * Implement inbound registration?
+
+ * Port plugins to other unices?
+
+Plugins
+-------
+
+ * Plugin `meminfo'
+
+ * Url shortenning
+
+ * Translation
+
+Ideas
+-----
+
+ * Write small programs to monitor services, like a website for
+   example. And send messages if the service is down.

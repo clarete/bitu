@@ -146,6 +146,8 @@ void
 bitu_server_free (bitu_server_t *server)
 {
   hashtable_destroy (server->commands);
+  close (server->sock);
+  unlink (server->sock_path);
   free (server->sock_path);
   free (server);
 }

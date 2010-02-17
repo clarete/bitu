@@ -1,0 +1,37 @@
+bitU TODO file
+==============
+
+The following entries are *NOT* in order of importance nor in the
+order that they will be implemented.
+
+One day, this file will be deleted and these entries will become
+tickets in a bts, I hope.
+
+ * Change extract_params to read stuff withing "" as a single param
+
+ * Call server commands from bituctl out of the shell via command line
+
+ * Implement a loader switch
+
+ * Implement a python loader
+
+ * Auto accept users that add the bot
+
+   - these users should be stored in a whitelist
+
+   - Maybe this whitelist should be present in the cfg file
+
+ * Implement the log level configuration reading.
+
+   - There should be no needing to restart the bot after this action
+
+ * Save log stuff to a file
+
+   - There are so many things that can be logged, maybe more than one
+   file will be needed
+
+ * Write back configuration set via shell to the config file
+
+ * Separate the server_run func in _recv and _send funcs
+
+ * Catch SIGINT and gracefully stop the bot.

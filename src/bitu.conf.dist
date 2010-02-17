@@ -1,0 +1,25 @@
+# bitu server configuration file. All lines started with `#' are
+# ignored (as you can see =P)
+
+# Connection info
+# ---------------
+# This is the only part that you'll not be able to reconfigure while
+# the bot is running. You'll obviously need to restart it if you
+# change something in this section.
+jid server@localhost
+password server
+host 127.0.0.1
+port 5222
+server-sock-path /tmp/bitu.sock
+
+# Log stuff
+# ---------
+set-log-file /tmp/bitu.log
+set-log-level INFO,WARN,DEBUG,CRITICAL,ERROR
+
+# Plugin secton
+# -------------
+# holds names of libraries that should be loaded at the start of the
+# program.
+load cpuinfo
+load uptime

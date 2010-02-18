@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -28,7 +29,7 @@
 #include <readline/history.h>
 #include <bitu/util.h>
 
-#define SOCKET_PATH    "/tmp/server.sock"
+#define SOCKET_PATH    "/tmp/bitu.sock"
 #define PS1            "> "
 
 struct sh_command
@@ -67,6 +68,29 @@ main (int argc, char **argv)
   unsigned int s;
   struct sockaddr_un remote;
   socklen_t len;
+  char *socket_path = NULL;
+  int c;
+  static struct option long_options[] = {
+    { "server-socket", required_argument, NULL, 's' },
+    { 0, 0, 0, 0 }
+  };
+
+  while ((c = getopt_long (argc, argv, "s:", long_options, NULL)) != -1)
+    {
+      switch (c)
+        {
+        case 's':
+          socket_path = optarg;
+          break;
+
+        default:
+          fprintf (stderr, "Try `%s --help' for more information\n", argv[0]);
+          break;
+        }
+    }
+
+  if (socket_path == NULL)
+    socket_path = SOCKET_PATH;
 
   if ((s = socket (AF_UNIX, SOCK_STREAM, 0)) == -1)
     {
@@ -75,11 +99,11 @@ main (int argc, char **argv)
     }
 
   remote.sun_family = AF_UNIX;
-  strcpy (remote.sun_path, SOCKET_PATH);
+  strcpy (remote.sun_path, socket_path);
   len = strlen (remote.sun_path) + sizeof (remote.sun_family);
   if (connect (s, (struct sockaddr *) &remote, len) == -1)
     {
-      fprintf (stderr, "Error: %s\n", strerror (errno));
+      fprintf (stderr, "Error when connecting: %s\n", strerror (errno));
       return EXIT_FAILURE;
     }
 

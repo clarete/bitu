@@ -39,11 +39,12 @@ test_strstrip (void)
 void
 test_extract_params (void)
 {
-  char *line = "load dlloader plugin.so paramx paramy";
+  char *line = "cmd param3 param4 \"single param with spaces\" blehxx";
   char *cmd;
   char **params;
   int len, i;
 
+  printf ("line: %s\n", line);
   if (bitu_util_extract_params (line, &cmd, &params, &len))
     {
       printf ("cmd: %s, num params: %d, params: \n", cmd, len);

@@ -10,16 +10,14 @@ tickets in a bts, I hope.
 Core
 ----
 
- * Change extract_params to read stuff withing "" as a single param
-
  * Call server commands from bituctl out of the shell via command line
 
  * Implement a loader switch
 
  * Implement a python loader
 
- * Write a simple python client to be able to send stuff to the
-   server via API.
+   - It would be nice to write a simple python client to be able to
+   send stuff to the server via API.
 
  * Auto accept users that add the bot
 

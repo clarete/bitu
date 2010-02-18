@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <getopt.h>
 #include <iksemel.h>
 #include <taningia/taningia.h>
@@ -28,6 +29,15 @@
 #include <bitu/loader.h>
 #include <bitu/server.h>
 #include <bitu/conf.h>
+
+/* This global var will only be used to manipulate the only server
+ * instance running in the signal handler callback that don't accept
+ * extra params. The only operation done with it is the graceful
+ * shutdown of the application. */
+
+static bitu_server_t *main_server;
+
+/* XMPP client callbacks */
 
 static int
 connected_cb (ta_xmpp_client_t *client, void *data)
@@ -130,6 +140,25 @@ presence_noticed_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
   return 0;
 }
 
+/* Stuff to catch SIGINT and stop the bot gracefully. */
+
+static void
+_signal_handler (int sig, siginfo_t *si, void *data)
+{
+  bitu_server_free (main_server);
+}
+
+static void
+_setup_sigaction (bitu_app_t *app)
+{
+  struct sigaction sa;
+  sa.sa_flags = SA_SIGINFO;
+  sa.sa_sigaction = _signal_handler;
+  sigemptyset (&sa.sa_mask);
+  if (sigaction (SIGINT, &sa, NULL) == -1)
+    ta_log_warn (app->logger, "Unable to install sigaction to catch SIGINT");
+}
+
 static void
 usage (const char *prname)
 {
@@ -140,7 +169,6 @@ usage (const char *prname)
 int
 main (int argc, char **argv)
 {
-  /* xmpp stuff */
   bitu_app_t *app;
   bitu_server_t *server;
   ta_log_t *logger;
@@ -150,8 +178,6 @@ main (int argc, char **argv)
   char *config_file = NULL, *sock_path = NULL;
   int port = 0;
   int log_flags;
-
-  /* getopt stuff */
   int c;
   static struct option long_options[] = {
     { "jid", required_argument, NULL, 'j' },
@@ -293,6 +319,10 @@ main (int argc, char **argv)
   /* Initializing the local server that will handle configuration
    * interaction. */
   server = bitu_server_new (sock_path, app);
+  main_server = server;
+
+  /* Function that install the sigaction that will handle signals */
+  _setup_sigaction (app);
 
   /* Running all commands found in the config file. */
   for (tmp = commands; tmp; tmp = tmp->next)
@@ -329,7 +359,6 @@ main (int argc, char **argv)
   bitu_server_run (server);
 
  finalize:
-  bitu_server_free (server);
   bitu_plugin_ctx_free (app->plugin_ctx);
   ta_xmpp_client_free (app->xmpp);
   ta_log_free (app->logger);

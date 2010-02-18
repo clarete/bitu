@@ -42,6 +42,7 @@ struct _bitu_server
   bitu_app_t *app;
   unsigned int sock;
   hashtable_t *commands;
+  int can_run;
 };
 
 static char *
@@ -216,6 +217,7 @@ bitu_server_new (const char *sock_path, bitu_app_t *app)
   server->sock_path = strdup (sock_path);
   server->app = app;
   server->commands = hashtable_create (hash_string, string_equal, NULL, NULL);
+  server->can_run = 1;
 
   /* Registering commands */
   hashtable_set (server->commands, "load", cmd_load);
@@ -228,7 +230,10 @@ bitu_server_new (const char *sock_path, bitu_app_t *app)
 void
 bitu_server_free (bitu_server_t *server)
 {
+  ta_log_info (server->app->logger, "Gracefully exiting, see you!");
+  ta_xmpp_client_disconnect (server->app->xmpp);
   hashtable_destroy (server->commands);
+  server->can_run = 0;
   close (server->sock);
   unlink (server->sock_path);
   free (server->sock_path);
@@ -289,7 +294,7 @@ bitu_server_run (bitu_server_t *server)
   unsigned int sock;
   struct sockaddr_un remote;
 
-  while (1)
+  while (server->can_run)
     {
       int done = 0;
       socklen_t len;
@@ -299,6 +304,8 @@ bitu_server_run (bitu_server_t *server)
 
       len = sizeof (struct sockaddr_un);
       sock = accept (server->sock, (struct sockaddr *) &remote, &len);
+      if (sock == -1)
+        return;
       ta_log_info (server->app->logger, "Client connected");
 
       while (!done)

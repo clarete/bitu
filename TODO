@@ -38,8 +38,6 @@ Core
 
  * Separate the server_run func in _recv and _send funcs
 
- * Catch SIGINT and gracefully stop the bot.
-
  * Write a man page
 
  * Improve the `usage()' function.

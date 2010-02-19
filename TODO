@@ -10,8 +10,6 @@ tickets in a bts, I hope.
 Core
 ----
 
- * Call server commands from bituctl out of the shell via command line
-
  * Implement a loader switch
 
  * Implement a python loader

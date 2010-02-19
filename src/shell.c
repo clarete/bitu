@@ -61,6 +61,30 @@ static struct sh_command commands[] = {
   { NULL, NULL }
 };
 
+static char *
+_escape_param (const char *param, int *len)
+{
+  char *ret, *s;
+  char c;
+  int i = 0;
+
+  if ((ret = malloc (strlen (param) * 2)) == NULL)
+    return NULL;
+
+  s = (char *) param;
+
+  while ((c = *s++))
+    {
+      if (c == ' ' || c == '\"')
+        ret[i++] = '\\';
+      ret[i++] = c;
+    }
+  ret[i] = '\0';
+  if (len != NULL)
+    *len = i;
+  return ret;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -105,6 +129,94 @@ main (int argc, char **argv)
     {
       fprintf (stderr, "Error when connecting: %s\n", strerror (errno));
       return EXIT_FAILURE;
+    }
+
+  /* Interactive shell only appears when no param is received */
+  if (argc > 1)
+    {
+      /* Collecting the command and its parameters to exec them on the
+       * server and then feed back the user. */
+      char *cmd = NULL, *cmdline = NULL;
+      char *param = NULL, *tmp = NULL;
+      int i, nparams;
+      int cmd_len, full_len;
+      int allocated = 0;
+      int bufsize = 128;
+
+      cmd = argv[1];
+      nparams = argc - 2;
+      cmd_len = strlen (cmd);
+      full_len = cmd_len;
+
+      allocated = bufsize;
+      cmdline = malloc (bufsize);
+      memcpy (cmdline, cmd, cmd_len);
+
+      cmdline[cmd_len] = ' ';
+      full_len++;
+
+      if (argc > 2)
+        {
+          int plen;
+
+          /* Yes, we have params to collect. */
+          for (i = 2; i < argc; i++)
+            {
+              /* The `_escape_param()' also returns the size of the
+               * string. */
+              param = _escape_param (argv[i], &plen);
+
+              /* Allocatting more space if it's needed */
+              if (full_len + plen > allocated)
+                {
+                  if ((tmp = realloc (cmdline, allocated + bufsize)) == NULL)
+                    {
+                      free (cmdline);
+                      close (s);
+                      exit (EXIT_FAILURE);
+                    }
+                  else
+                    {
+                      cmdline = tmp;
+                      allocated += bufsize;
+                    }
+                }
+
+              /* Copying parameter to the command line string */
+              memcpy (cmdline + full_len, param, plen);
+
+              /* this +1 is the space that will be added soon */
+              full_len += plen; // + 1;
+              cmdline[full_len] = ' ';
+              full_len++;
+
+              free (param);
+            }
+        }
+      cmdline[--full_len] = '\0';
+
+      /* Sending the command to the server */
+      if (send (s, cmdline, full_len, 0) == -1)
+        {
+          perror ("send");
+          exit (EXIT_FAILURE);
+        }
+      free (cmdline);
+
+      /* Receiving the answer from the server */
+      if (running)
+        {
+          int n;
+          char str[100];
+          n = recv (s, str, 100, 0);
+          if (n > 1)
+            {
+              str[n] = '\0';
+              printf ("%s\n", str);
+            }
+        }
+
+      goto finalize;
     }
 
   printf ("bitU interactive shell connected!\n");
@@ -174,6 +286,7 @@ main (int argc, char **argv)
         }
     }
 
+ finalize:
   close (s);
   return 0;
 }

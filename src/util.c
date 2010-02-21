@@ -45,7 +45,7 @@ bitu_util_extract_params (const char *line, char **cmd,
 {
   size_t i;
   char *s;
-  int bufsize = 64;
+  int bufsize = 128;
   int inside_quotes = 0;
 
   char *line_tmp, *ecmd = NULL;
@@ -54,6 +54,7 @@ bitu_util_extract_params (const char *line, char **cmd,
 
   size_t full_len;
   int iter = 0, tok_size = 0;
+  int allocated = 0;
   char *tok = NULL;
 
   line_tmp = strdup (line);
@@ -105,10 +106,12 @@ bitu_util_extract_params (const char *line, char **cmd,
         }
       else
         {
-          if (tok_size == 0 || iter > tok_size)
+          if (tok_size == 0 || tok_size > allocated)
             {
               char *tmp;
-              if ((tmp = realloc (tok, tok_size + bufsize)) == NULL)
+              while (allocated < tok_size)
+                allocated += bufsize;
+              if ((tmp = realloc (tok, allocated)) == NULL)
                 {
                   free (tok);
                   return 0;

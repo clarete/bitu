@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <errno.h>
+#include <sys/select.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -35,29 +36,18 @@
 struct sh_command
 {
   const char *name;
-  int (*handler) (const char *line);
+  int (*handler) (char **, int);
+  int num_params;
 };
 
 static int
-sh_help (const char *line __attribute__ ((unused)))
-{
-  printf ("Available commands:\n");
-  printf (" available\t- List available modules\n");
-  printf (" enabled\t- List loaded modules\n");
-  printf (" load\t\t- Loads an available module into the running client\n");
-  printf (" unload\t\t- Unloads a loaded module from the running client\n");
-  return 0;
-}
-
-static int
-sh_exit (const char *line __attribute__ ((unused)))
+sh_exit (char **params, int num_params)
 {
   return 1;
 }
 
 static struct sh_command commands[] = {
-  { "help", sh_help },
-  { "exit", sh_exit },
+  { "exit", sh_exit, 0 },
   { NULL, NULL }
 };
 
@@ -84,6 +74,77 @@ _escape_param (const char *param, int *len)
     *len = i;
   return ret;
 }
+
+static int
+_shell_recv (int sock, char *buf, size_t bufsize, int timeout)
+{
+  int n, r;
+  fd_set fds;
+  struct timeval tv, *tvptr;
+
+  if (timeout == -1)
+    tvptr = NULL;
+  else
+    {
+      tv.tv_sec = 0;
+      tv.tv_usec = timeout;
+      tvptr = &tv;
+    }
+
+  FD_ZERO (&fds);
+  FD_SET (sock, &fds);
+  r = select (sock + 1, &fds, NULL, NULL, tvptr);
+  if (r == -1 && errno == EAGAIN)
+    return 0;
+  else if (r == -1)
+    {
+      printf ("Error in select(): %s\n", strerror (errno));
+      return -1;
+    }
+  if (FD_ISSET (sock, &fds))
+    {
+      do
+        n = recv (sock, buf, bufsize, 0);
+      while (n == -1 && (errno == EAGAIN));
+      if (n > 0)
+        return n;
+      else if (n < 0)
+        {
+          printf ("Error in recv(): %s\n", strerror (errno));
+          return -1;
+        }
+    }
+  return 0;
+}
+
+int
+bitu_shell_recv (int sock)
+{
+  int full_size = 0;
+  int n, hasdata = 0;
+  int bufsize = 128;
+  char buf[bufsize];
+  int timeout = 1000;
+  while (1)
+    {
+      n = _shell_recv (sock, buf, bufsize, timeout);
+      if (n < 0)        /* Something wrong happened */
+        break;
+      if (n == 0)       /* End of data */
+        break;
+      if (n == 1)       /* Nothing to be printed out */
+        break;
+      buf[n] = '\0';
+      printf (buf);
+      hasdata = 1;
+      full_size += n;
+      timeout = 0;
+    }
+  if (hasdata)
+    printf ("\n");
+  return full_size;
+}
+
 
 int
 main (int argc, char **argv)
@@ -167,26 +228,25 @@ main (int argc, char **argv)
               param = _escape_param (argv[i], &plen);
 
               /* Allocatting more space if it's needed */
-              if (full_len + plen > allocated)
+              if ((full_len + plen) > allocated)
                 {
-                  if ((tmp = realloc (cmdline, allocated + bufsize)) == NULL)
+                  while (allocated < full_len + plen)
+                    allocated += bufsize;
+                  if ((tmp = realloc (cmdline, allocated)) == NULL)
                     {
                       free (cmdline);
                       close (s);
                       exit (EXIT_FAILURE);
                     }
                   else
-                    {
-                      cmdline = tmp;
-                      allocated += bufsize;
-                    }
+                    cmdline = tmp;
                 }
 
               /* Copying parameter to the command line string */
               memcpy (cmdline + full_len, param, plen);
 
-              /* this +1 is the space that will be added soon */
-              full_len += plen; // + 1;
+              /* Adding the space after param */
+              full_len += plen;
               cmdline[full_len] = ' ';
               full_len++;
 
@@ -205,17 +265,7 @@ main (int argc, char **argv)
 
       /* Receiving the answer from the server */
       if (running)
-        {
-          int n;
-          char str[100];
-          n = recv (s, str, 100, 0);
-          if (n > 1)
-            {
-              str[n] = '\0';
-              printf ("%s\n", str);
-            }
-        }
-
+        bitu_shell_recv (s);
       goto finalize;
     }
 
@@ -225,9 +275,9 @@ main (int argc, char **argv)
   while (running)
     {
       char *line;
-      char *line_stripped;
-      char str[100];
-      ssize_t n;
+      char *cmd;
+      char **params;
+      int num_params;
 
       /* Main readline call.*/
       line = readline (PS1);
@@ -238,52 +288,39 @@ main (int argc, char **argv)
           break;
         }
 
-      /* avoid losing the right pointer to free */
-      line_stripped = bitu_util_strstrip (line);
-
-      if (strlen (line_stripped) == 0)
-        continue;
+      if (!bitu_util_extract_params (line, &cmd, &params, &num_params))
+        {
+          printf ("Command seems to be empty\n");
+          continue;
+        }
       else
         {
-          /* strtok modifies its first param */
-          char *line_tok = strdup (line_stripped);
-          char *cmd = strtok (line_tok, " ");
-          char *params = strtok (NULL, "");
-          int len, found = 0;
-
-          /* Let's look for an available command */
+          /* Let's look for local commands */
           for (i = 0; commands[i].name; i++)
+            if (strcmp (commands[i].name, cmd) == 0)
+              if (commands[i].handler (params, num_params))
+                running = 0;
+
+          if (running)
             {
-              if (strcmp (commands[i].name, cmd) == 0)
+              int sent;
+              len = strlen (line);
+              printf ("Local command (%d): %s\n", len, line);
+              sent = send (s, line, len, 0);
+              printf ("Sent data: %d\n", sent);
+              if (sent == -1)
                 {
-                  found = 1;
-                  if (commands[i].handler (params))
-                    running = 0;
+                  fprintf (stderr, "Error in send(): %s\n",
+                           strerror (errno));
+                  goto finalize;
                 }
             }
-          if (!found)
-            {
-              len = strlen (line_stripped);
-              if (send (s, line_stripped, len, 0) == -1)
-                {
-                  perror ("send");
-                  exit (EXIT_FAILURE);
-                }
-            }
-          free (line_tok);
         }
       free (line);
 
       /* Receiving the answer from the server */
       if (running)
-        {
-          n = recv (s, str, 100, 0);
-          if (n > 1)
-            {
-              str[n] = '\0';
-              printf ("%s\n", str);
-            }
-        }
+        bitu_shell_recv (s);
     }
 
  finalize:

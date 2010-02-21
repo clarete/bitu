@@ -328,8 +328,15 @@ main (int argc, char **argv)
   for (tmp = commands; tmp; tmp = tmp->next)
     {
       bitu_conf_entry_t *entry;
+      char *answer = NULL;
+      int answer_size;
       entry = (bitu_conf_entry_t *) tmp->data;
-      bitu_server_exec_cmd (server, entry->cmd, entry->params, entry->nparams);
+      bitu_server_exec_cmd (server, entry->cmd, entry->params,
+                            entry->nparams, &answer_size);
+      if (answer && answer_size > 1)
+        ta_log_warn (app->logger, "Warn running command %s: %s",
+                     entry->cmd, answer);
+      free (answer);
     }
   ta_list_free (commands);
 

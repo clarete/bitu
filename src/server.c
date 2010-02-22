@@ -531,6 +531,12 @@ bitu_server_run (bitu_server_t *server)
 
       len = sizeof (struct sockaddr_un);
       sock = accept (server->sock, (struct sockaddr *) &remote, &len);
+      if (sock == -1 && errno == EINTR)
+        {
+          ta_log_info (server->app->logger,
+                       "accept() interrupted, stopping main loop");
+          break;
+        }
       if (sock == -1)
         {
           ta_log_error (server->app->logger,

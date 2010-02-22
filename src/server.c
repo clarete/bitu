@@ -340,7 +340,7 @@ bitu_server_exec_cmd (bitu_server_t *server, const char *cmd,
   */
   else
     {
-      ta_log_info (server->app->logger, "Running command `%s'", cmd);
+      ta_log_debug (server->app->logger, "Running command `%s'", cmd);
       answer = command (server, params, nparams);
       if (answer != NULL)
         msg_size = strlen (answer);

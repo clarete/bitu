@@ -34,13 +34,11 @@ Core
 
  * Write back configuration set via shell to the config file
 
- * Separate the server_run func in _recv and _send funcs
-
  * Write a man page
 
  * Improve the `usage()' function.
 
- * Implement inbound registration?
+ * Implement inband registration?
 
  * Port plugins to other unices?
 

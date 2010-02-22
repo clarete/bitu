@@ -21,7 +21,9 @@
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -208,6 +210,61 @@ cmd_list (bitu_server_t *server, char **params, int num_params)
   return ret;
 }
 
+static int
+_log_handler (ta_log_t *log, ta_log_level_t level,
+              const char *data, void *user_data)
+{
+  bitu_server_t *server = (bitu_server_t *) user_data;
+  write (server->app->logfd, data, strlen (data));
+  write (server->app->logfd, "\n", 1);
+  return 0;
+}
+
+static char *
+cmd_set_log_file (bitu_server_t *server, char **params, int nparams)
+{
+  char *ret = NULL;
+  char *error, *logfile;
+  int logfd;
+
+  if ((error = _validate_num_params ("set-log-file", 1, nparams)) != NULL)
+    return error;
+
+  /* Cleaning possible old values */
+
+  logfile = strdup (params[0]);
+  logfd = open (logfile,
+                O_WRONLY | O_CREAT | O_APPEND,
+                S_IRUSR | S_IWUSR | S_IRGRP);
+
+  if (logfd == -1)
+    {
+      int size;
+      size_t bufsize = 128;
+      error = malloc (bufsize);
+      size = snprintf (error, bufsize,
+                       "Unable to open file log file `%s': %s",
+                       server->app->logfile, strerror (errno));
+      ta_log_error (server->app->logger, error);
+      return error;
+    }
+  if (server->app->logfile)
+    free (server->app->logfile);
+  if (server->app->logfd > -1)
+    close (server->app->logfd);
+
+  server->app->logfile = logfile;
+  server->app->logfd = logfd;
+
+  ta_log_info (server->app->logger, "Setting log file to %s",
+               server->app->logfile);
+  ta_log_set_handler (server->app->logger,
+                      (ta_log_handler_func_t) _log_handler,
+                      server);
+
+  return ret;
+}
+
 /* signal handler stuff */
 
 static void
@@ -258,6 +315,7 @@ bitu_server_new (const char *sock_path, bitu_app_t *app)
   hashtable_set (server->commands, "unload", cmd_unload);
   hashtable_set (server->commands, "send", cmd_send);
   hashtable_set (server->commands, "list", cmd_list);
+  hashtable_set (server->commands, "set-log-file", cmd_set_log_file);
 
   _setup_sigaction (server);
   return server;

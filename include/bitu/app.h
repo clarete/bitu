@@ -26,6 +26,8 @@ typedef struct {
   ta_log_t *logger;
   ta_xmpp_client_t *xmpp;
   bitu_plugin_ctx_t *plugin_ctx;
+  char *logfile;
+  int logfd;
 } bitu_app_t;
 
 #endif /* BITU_APP_H_ */

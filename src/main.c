@@ -19,6 +19,7 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <signal.h>
 #include <getopt.h>
@@ -276,6 +277,10 @@ main (int argc, char **argv)
       exit (EXIT_FAILURE);
     }
 
+  /* Preparing log file stuff */
+  app->logfile = NULL;
+  app->logfd = -1;
+
   /* Preparing the plugin context */
   app->plugin_ctx = bitu_plugin_ctx_new ();
 
@@ -369,6 +374,10 @@ main (int argc, char **argv)
   bitu_plugin_ctx_free (app->plugin_ctx);
   ta_xmpp_client_free (app->xmpp);
   ta_log_free (app->logger);
+  if (app->logfile)
+    free (app->logfile);
+  if (app->logfd > 0)
+    close (app->logfd);
   free (app);
 
   return 0;

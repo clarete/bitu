@@ -63,6 +63,19 @@ _validate_num_params (const char *cmd, int x, int y)
 }
 
 static char *
+_validate_min_num_params (const char *cmd, int x, int y)
+{
+  if (y < x)
+    {
+      char *error = malloc (128);
+      snprintf (error, 128, "Command `%s' takes %d param(s), %d given",
+                cmd, x, y);
+      return error;
+    }
+  return NULL;
+}
+
+static char *
 cmd_load (bitu_server_t *server, char **params, int num_params)
 {
   size_t fullsize;
@@ -265,6 +278,42 @@ cmd_set_log_file (bitu_server_t *server, char **params, int nparams)
   return ret;
 }
 
+static char *
+cmd_set_log_level (bitu_server_t *server, char **params, int nparams)
+{
+  char *ret = NULL;
+  char *tok = NULL;
+  char *error = NULL;
+  int flags = 0, i = 0;
+  ta_log_t *logger;
+
+  if ((error = _validate_min_num_params ("set-log-level", 1, nparams)) != NULL)
+    return error;
+  for (i = 0; i < nparams; i++)
+    {
+      tok = params[i];
+
+      if (strcmp (tok, "DEBUG") == 0)
+        flags |= TA_LOG_DEBUG;
+      else if (strcmp (tok, "INFO") == 0)
+        flags |= TA_LOG_INFO;
+      else if (strcmp (tok, "WARN") == 0)
+        flags |= TA_LOG_WARN;
+      else if (strcmp (tok, "ERROR") == 0)
+        flags |= TA_LOG_ERROR;
+      else if (strcmp (tok, "CRITICAL") == 0)
+        flags |= TA_LOG_CRITICAL;
+    }
+
+  logger = server->app->logger;
+  ta_log_set_level (logger, flags);
+
+  logger = ta_xmpp_client_get_logger (server->app->xmpp);
+  ta_log_set_level (logger, flags);
+
+  return ret;
+}
+
 /* signal handler stuff */
 
 static void
@@ -316,6 +365,7 @@ bitu_server_new (const char *sock_path, bitu_app_t *app)
   hashtable_set (server->commands, "send", cmd_send);
   hashtable_set (server->commands, "list", cmd_list);
   hashtable_set (server->commands, "set-log-file", cmd_set_log_file);
+  hashtable_set (server->commands, "set-log-level", cmd_set_log_level);
 
   _setup_sigaction (server);
   return server;
@@ -507,7 +557,7 @@ bitu_server_send (bitu_server_t *server, int sock,
       if (n == -1)
         {
           ta_log_error (server->app->logger,
-                        "Error in send(): %s\n",
+                        "Error in send(): %s",
                         strerror (errno));
           return -1;
         }

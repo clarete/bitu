@@ -28,6 +28,7 @@ typedef struct {
   bitu_plugin_ctx_t *plugin_ctx;
   char *logfile;
   int logfd;
+  int logflags;
 } bitu_app_t;
 
 #endif /* BITU_APP_H_ */

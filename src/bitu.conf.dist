@@ -15,7 +15,7 @@ server-sock-path /tmp/bitu.sock
 # Log stuff
 # ---------
 set-log-file /tmp/bitu.log
-set-log-level INFO,WARN,DEBUG,CRITICAL,ERROR
+set-log-level DEBUG INFO WARN ERROR CRITICAL
 
 # Plugin secton
 # -------------

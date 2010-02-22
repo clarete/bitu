@@ -172,13 +172,11 @@ main (int argc, char **argv)
 {
   bitu_app_t *app;
   bitu_server_t *server;
-  ta_log_t *logger;
   ta_list_t *conf;
   ta_list_t *commands = NULL, *tmp = NULL;
   char *jid = NULL, *passwd = NULL, *host = NULL;
   char *config_file = NULL, *sock_path = NULL;
   int port = 0;
-  int log_flags;
   int c;
   static struct option long_options[] = {
     { "jid", required_argument, NULL, 'j' },
@@ -280,6 +278,7 @@ main (int argc, char **argv)
   /* Preparing log file stuff */
   app->logfile = NULL;
   app->logfd = -1;
+  app->logflags = 0;
 
   /* Preparing the plugin context */
   app->plugin_ctx = bitu_plugin_ctx_new ();
@@ -307,19 +306,8 @@ main (int argc, char **argv)
                                 (ta_xmpp_client_hook_t) presence_noticed_cb,
                                 app->plugin_ctx);
 
-  /* Configuring logging stuff */
-  log_flags = TA_LOG_INFO | TA_LOG_WARN | TA_LOG_DEBUG |
-    TA_LOG_CRITICAL | TA_LOG_ERROR;
-
-  /* xmpp client logger */
-  logger = ta_xmpp_client_get_logger (app->xmpp);
-  ta_log_set_level (logger, log_flags);
-  ta_log_set_use_colors (logger, 1);
-
   /* main application logger */
   app->logger = ta_log_new ("bitu-main");
-  ta_log_set_level (app->logger, log_flags);
-  ta_log_set_use_colors (app->logger, 1);
 
   /* Initializing the local server that will handle configuration
    * interaction. */

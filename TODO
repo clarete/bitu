@@ -23,11 +23,6 @@ Core
 
    - Maybe this whitelist should be present in the cfg file
 
- * Save log stuff to a file
-
-   - There are so many things that can be logged, maybe more than one
-   file will be needed
-
  * Write back configuration set via shell to the config file
 
  * Write a man page

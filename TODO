@@ -23,10 +23,6 @@ Core
 
    - Maybe this whitelist should be present in the cfg file
 
- * Implement the log level configuration reading.
-
-   - There should be no needing to restart the bot after this action
-
  * Save log stuff to a file
 
    - There are so many things that can be logged, maybe more than one

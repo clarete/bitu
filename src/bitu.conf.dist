@@ -16,6 +16,7 @@ server-sock-path /tmp/bitu.sock
 # ---------
 set-log-file /tmp/bitu.log
 set-log-level DEBUG INFO WARN ERROR CRITICAL
+set-log-use-colors true
 
 # Plugin secton
 # -------------

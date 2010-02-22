@@ -281,7 +281,6 @@ cmd_set_log_file (bitu_server_t *server, char **params, int nparams)
 static char *
 cmd_set_log_level (bitu_server_t *server, char **params, int nparams)
 {
-  char *ret = NULL;
   char *tok = NULL;
   char *error = NULL;
   int flags = 0, i = 0;
@@ -311,7 +310,29 @@ cmd_set_log_level (bitu_server_t *server, char **params, int nparams)
   logger = ta_xmpp_client_get_logger (server->app->xmpp);
   ta_log_set_level (logger, flags);
 
-  return ret;
+  return NULL;
+}
+
+static char *
+cmd_set_log_use_colors (bitu_server_t *server, char **params, int nparams)
+{
+  char *error = NULL;
+  ta_log_t *logger;
+  int val;
+
+  if ((error = _validate_num_params ("set-log-use-colors", 1, nparams))
+      != NULL)
+    return error;
+
+  val = strcmp (params[0], "true") == 0;
+
+  logger = server->app->logger;
+  ta_log_set_use_colors (logger, val);
+
+  logger = ta_xmpp_client_get_logger (server->app->xmpp);
+  ta_log_set_use_colors (logger, val);
+
+  return NULL;
 }
 
 /* signal handler stuff */
@@ -366,6 +387,8 @@ bitu_server_new (const char *sock_path, bitu_app_t *app)
   hashtable_set (server->commands, "list", cmd_list);
   hashtable_set (server->commands, "set-log-file", cmd_set_log_file);
   hashtable_set (server->commands, "set-log-level", cmd_set_log_level);
+  hashtable_set (server->commands, "set-log-use-colors",
+                 cmd_set_log_use_colors);
 
   _setup_sigaction (server);
   return server;

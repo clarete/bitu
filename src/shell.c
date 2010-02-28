@@ -305,9 +305,7 @@ main (int argc, char **argv)
             {
               int sent;
               len = strlen (line);
-              printf ("Local command (%d): %s\n", len, line);
               sent = send (s, line, len, 0);
-              printf ("Sent data: %d\n", sent);
               if (sent == -1)
                 {
                   fprintf (stderr, "Error in send(): %s\n",

@@ -31,6 +31,8 @@
 #include <bitu/server.h>
 #include <bitu/conf.h>
 
+#define SOCKET_PATH    "/tmp/bitu.sock"
+
 /* This global var will only be used to manipulate the only server
  * instance running in the signal handler callback that don't accept
  * extra params. The only operation done with it is the graceful
@@ -183,6 +185,7 @@ main (int argc, char **argv)
     { "password", required_argument, NULL, 'p' },
     { "host", required_argument, NULL, 'H' },
     { "port", required_argument, NULL, 'P' },
+    { "server-socket", required_argument, NULL, 's' },
     { "config-file", optional_argument, NULL, 'c' },
     { "help", no_argument, NULL, 'h' },
     { 0, 0, 0, 0 }
@@ -207,6 +210,10 @@ main (int argc, char **argv)
 
         case 'P':
           port = atoi (optarg);
+          break;
+
+        case 's':
+          sock_path = strdup (optarg);
           break;
 
         case 'c':
@@ -265,6 +272,8 @@ main (int argc, char **argv)
       host = strdup (id->server);
       iks_stack_delete (stack);
     }
+  if (sock_path == NULL)
+    sock_path = strdup (SOCKET_PATH);
   if (port == 0)
     port = 5222;                /* Default xmpp port */
 
@@ -313,6 +322,7 @@ main (int argc, char **argv)
    * interaction. */
   server = bitu_server_new (sock_path, app);
   main_server = server;
+  free (sock_path);
 
   /* Function that install the sigaction that will handle signals */
   _setup_sigaction (app);

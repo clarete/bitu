@@ -186,7 +186,7 @@ main (int argc, char **argv)
     { "host", required_argument, NULL, 'H' },
     { "port", required_argument, NULL, 'P' },
     { "server-socket", required_argument, NULL, 's' },
-    { "config-file", optional_argument, NULL, 'c' },
+    { "config-file", required_argument, NULL, 'c' },
     { "help", no_argument, NULL, 'h' },
     { 0, 0, 0, 0 }
   };

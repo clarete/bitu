@@ -24,6 +24,7 @@
 #include <signal.h>
 #include <getopt.h>
 #include <errno.h>
+#include <glob.h>
 #include <iksemel.h>
 #include <taningia/taningia.h>
 #include <bitu/app.h>
@@ -240,12 +241,31 @@ main (int argc, char **argv)
     }
 
   /* Reading configuration from file */
-  if (config_file != NULL)
+  while (config_file != NULL)
     {
-      if ((conf = bitu_conf_read_from_file (config_file)) == NULL)
+      glob_t globbuf;
+      size_t globi;
+      if (glob (config_file, GLOB_NOSORT | GLOB_ERR, NULL, &globbuf) != 0)
         {
-          exit (EXIT_FAILURE);
+          fprintf (stderr, "Warn while loading config file: ");
+          fprintf (stderr, "Could not expand glob `%s'\n", config_file);
+          free (config_file);
+          config_file = NULL;
+          break;
         }
+      else
+        {
+          for (globi = 0; globi < globbuf.gl_pathc; globi++)
+            {
+              char *single_file = globbuf.gl_pathv[globi];
+              if ((conf = bitu_conf_read_from_file (single_file)) == NULL)
+                exit (EXIT_FAILURE);
+            }
+        }
+      globfree (&globbuf);
+      free (config_file);
+      config_file = NULL;
+
       for (tmp = conf; tmp; tmp = tmp->next)
         {
           bitu_conf_entry_t *entry;
@@ -260,10 +280,11 @@ main (int argc, char **argv)
             port = atoi (entry->params[0]);
           else if (strcmp (entry->cmd, "server-sock-path") == 0)
             sock_path = entry->params[0];
+          else if (strcmp (entry->cmd, "include") == 0)
+            config_file = strdup (entry->params[0]);
           else
             commands = ta_list_append (commands, entry);
         }
-      free (config_file);
     }
 
   /* Some param validation */

@@ -23,6 +23,7 @@
 #include <string.h>
 #include <signal.h>
 #include <getopt.h>
+#include <errno.h>
 #include <iksemel.h>
 #include <taningia/taningia.h>
 #include <bitu/app.h>
@@ -179,6 +180,7 @@ main (int argc, char **argv)
   char *jid = NULL, *passwd = NULL, *host = NULL;
   char *config_file = NULL, *sock_path = NULL;
   int port = 0;
+  int daemonize = 0;
   int c;
   static struct option long_options[] = {
     { "jid", required_argument, NULL, 'j' },
@@ -187,11 +189,12 @@ main (int argc, char **argv)
     { "port", required_argument, NULL, 'P' },
     { "server-socket", required_argument, NULL, 's' },
     { "config-file", required_argument, NULL, 'c' },
+    { "daemonize", no_argument, NULL, 'd' },
     { "help", no_argument, NULL, 'h' },
     { 0, 0, 0, 0 }
   };
 
-  while ((c = getopt_long (argc, argv, "j:p:H:P:c:",
+  while ((c = getopt_long (argc, argv, "j:p:H:P:c:d",
                            long_options, NULL)) != -1)
     {
       switch (c)
@@ -225,8 +228,13 @@ main (int argc, char **argv)
           exit (EXIT_SUCCESS);
           break;
 
+        case 'd':
+          daemonize = 1;
+          break;
+
         default:
           fprintf (stderr, "Try `%s --help' for more information\n", argv[0]);
+          exit (EXIT_FAILURE);
           break;
         }
     }
@@ -342,6 +350,18 @@ main (int argc, char **argv)
       free (answer);
     }
   ta_list_free (commands);
+
+  /* Sending the rest of the program to the background if requested */
+  if (daemonize)
+    {
+      ta_log_info (app->logger, "Going to the background, as requested");
+      if (daemon (0, 0) == -1)
+        {
+          ta_log_warn (app->logger, "Unable to background the process: %s",
+                       strerror (errno));
+          exit (EXIT_FAILURE);
+        }
+    }
 
   /* Connecting */
   if (!ta_xmpp_client_connect (app->xmpp))

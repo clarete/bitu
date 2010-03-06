@@ -218,7 +218,7 @@ cmd_list (bitu_server_t *server, char **params, int num_params)
       while ((iter = hashtable_iter_next (server->commands, iter)));
 
       /* Removing the last \n. It is not needed in the end of the string */
-      memcpy (ret + full_size - 1, "\b", 1);
+      ret[full_size-1] = '\0';
     }
   return ret;
 }

@@ -29,8 +29,6 @@ Core
 
  * Write a man page
 
- * Improve the `usage()' function.
-
  * Implement inband registration?
 
  * Port plugins to other unices?

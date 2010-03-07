@@ -81,7 +81,7 @@ _shell_recv (int sock, char *buf, size_t bufsize, int timeout)
     return 0;
   else if (r == -1)
     {
-      printf ("Error in select(): %s\n", strerror (errno));
+      fprintf (stderr, "Error in select(): %s\n", strerror (errno));
       return -1;
     }
   if (FD_ISSET (sock, &fds))
@@ -93,7 +93,7 @@ _shell_recv (int sock, char *buf, size_t bufsize, int timeout)
         return n;
       else if (n < 0)
         {
-          printf ("Error in recv(): %s\n", strerror (errno));
+          fprintf (stderr, "Error in recv(): %s\n", strerror (errno));
           return -1;
         }
     }

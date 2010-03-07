@@ -623,49 +623,68 @@ bitu_server_run (bitu_server_t *server)
        * allocating space to store the whole command received via
        * socket */
 
-      full_len = allocated = 0;
-      str = NULL;
-      timeout = -1;
-
       while (1)
         {
-          int n, bufsize = 128;
-          char buf[bufsize];
-          n = bitu_server_recv (server, sock, buf, bufsize, timeout);
-          ta_log_debug (server->app->logger, "recv() returned: %d", n);
-          if (n == 0)
+          full_len = allocated = 0;
+          str = NULL;
+          timeout = -1;
+
+          while (1)
             {
-              ta_log_info (server->app->logger, "End of client stream");
-              break;
-            }
-          if (n < 0)
-            break;
-          buf[n] = '\0';
-          if ((full_len + n) > allocated)
-            {
-              char *tmp;
-              while (allocated < (full_len + n))
-                allocated += bufsize;
-              if ((tmp = realloc (str, allocated)) == NULL)
+              int n, bufsize = 128;
+              char buf[bufsize];
+              n = bitu_server_recv (server, sock, buf, bufsize, timeout);
+              ta_log_debug (server->app->logger, "recv() returned: %d", n);
+              if (n == 0)
                 {
-                  if (str)
-                    free (str);
+                  ta_log_info (server->app->logger, "End of client stream");
                   break;
                 }
-              else
-                str = tmp;
+              if (n < 0)
+                break;
+              buf[n] = '\0';
+              if ((full_len + n) > allocated)
+                {
+                  char *tmp;
+                  while (allocated < (full_len + n))
+                    allocated += bufsize;
+                  if ((tmp = realloc (str, allocated)) == NULL)
+                    {
+                      if (str)
+                        free (str);
+                      break;
+                    }
+                  else
+                    str = tmp;
+                }
+              memcpy (str + full_len, buf, n);
+              full_len += n;
+              timeout = 0;
             }
-          memcpy (str + full_len, buf, n);
-          full_len += n;
-          timeout = 0;
-        }
-      if (str)
-        str[full_len] = '\0';
-      answer = bitu_server_exec_cmd_line (server, str);
+          if (str)
+            str[full_len] = '\0';
 
-      bitu_server_send (server, sock, answer, strlen (answer));
-      if (answer)
-        free (answer);
-      close (sock);
+          /* Client is saying good bye, it means that no command
+           * should be run. It is time to get out */
+          if ((str == NULL) ||
+              (str && strcmp (str, "exit") == 0) ||
+              (str && strlen (str) < 2))
+            {
+              close (sock);
+              break;
+            }
+
+          /* Finally we try to execute the received command. */
+          if ((answer = bitu_server_exec_cmd_line (server, str)) != NULL)
+            {
+              int ret;
+              ret = bitu_server_send (server, sock, answer, strlen (answer));
+              if (answer)
+                free (answer);
+              if (ret == -1)
+                break;
+            }
+          bitu_server_send (server, sock, "\0", 1);
+        }
     }
 }

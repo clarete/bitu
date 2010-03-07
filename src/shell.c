@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,24 +33,6 @@
 
 #define SOCKET_PATH    "/tmp/bitu.sock"
 #define PS1            "> "
-
-struct sh_command
-{
-  const char *name;
-  int (*handler) (char **, int);
-  int num_params;
-};
-
-static int
-sh_exit (char **params, int num_params)
-{
-  return 1;
-}
-
-static struct sh_command commands[] = {
-  { "exit", sh_exit, 0 },
-  { NULL, NULL }
-};
 
 static char *
 _escape_param (const char *param, int *len)
@@ -118,13 +101,12 @@ _shell_recv (int sock, char *buf, size_t bufsize, int timeout)
 }
 
 int
-bitu_shell_recv (int sock)
+bitu_shell_recv (int sock, int timeout)
 {
   int full_size = 0;
   int n, hasdata = 0;
   int bufsize = 128;
   char buf[bufsize];
-  int timeout = 1000;
   while (1)
     {
       n = _shell_recv (sock, buf, bufsize, timeout);
@@ -145,11 +127,18 @@ bitu_shell_recv (int sock)
   return full_size;
 }
 
+static void
+_close_connection (int socket)
+{
+  if (send (socket, "exit", 4, 0) == -1)
+    fprintf (stderr,
+             "Warning on sending good bye to the server: send(): %s\n",
+             strerror (errno));
+}
 
 int
 main (int argc, char **argv)
 {
-  int i, running = 1;
   unsigned int s;
   struct sockaddr_un remote;
   socklen_t len;
@@ -261,62 +250,48 @@ main (int argc, char **argv)
         }
       free (cmdline);
 
-      /* Receiving the answer from the server */
-      if (running)
-        bitu_shell_recv (s);
+      /* Receiving the answer from the server. */
+      bitu_shell_recv (s, -1);
       goto finalize;
     }
 
-  printf ("bitU interactive shell connected!\n");
+  printf ("bitU v" VERSION " interactive shell connected!\n");
   printf ("Type `help' for more information\n");
 
-  while (running)
+  while (1)
     {
       char *line;
-      char *cmd;
-      char **params;
-      int num_params;
 
       /* Main readline call.*/
       line = readline (PS1);
 
       if (line == NULL)
         {
+          _close_connection (s);
           printf ("\n");
           break;
         }
-
-      if (!bitu_util_extract_params (line, &cmd, &params, &num_params))
+      if (strlen (line) == 0)
+        continue;
+      else if (strcmp (line, "exit") == 0)
         {
-          printf ("Command seems to be empty\n");
-          continue;
+          _close_connection (s);
+          break;
         }
       else
         {
-          /* Let's look for local commands */
-          for (i = 0; commands[i].name; i++)
-            if (strcmp (commands[i].name, cmd) == 0)
-              if (commands[i].handler (params, num_params))
-                running = 0;
-
-          if (running)
+          len = strlen (line);
+          if (send (s, line, len, 0) == -1)
             {
-              int sent;
-              len = strlen (line);
-              sent = send (s, line, len, 0);
-              if (sent == -1)
-                {
-                  fprintf (stderr, "Error in send(): %s\n",
-                           strerror (errno));
-                  goto finalize;
-                }
+              fprintf (stderr, "Error in send(): %s\n",
+                       strerror (errno));
+              goto finalize;
             }
         }
       free (line);
 
       /* Receiving the answer from the server */
-      if (running)
-        bitu_shell_recv (s);
+      bitu_shell_recv (s, -1);
     }
 
  finalize:

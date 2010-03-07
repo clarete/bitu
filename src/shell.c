@@ -154,6 +154,7 @@ main (int argc, char **argv)
   struct sockaddr_un remote;
   socklen_t len;
   char *socket_path = NULL;
+  int arglen = argc - 1;
   int c;
   static struct option long_options[] = {
     { "server-socket", required_argument, NULL, 's' },
@@ -166,10 +167,12 @@ main (int argc, char **argv)
         {
         case 's':
           socket_path = optarg;
+          arglen--;
           break;
 
         default:
           fprintf (stderr, "Try `%s --help' for more information\n", argv[0]);
+          exit (EXIT_FAILURE);
           break;
         }
     }
@@ -193,19 +196,19 @@ main (int argc, char **argv)
     }
 
   /* Interactive shell only appears when no param is received */
-  if (argc > 1)
+  if (arglen > 0)
     {
       /* Collecting the command and its parameters to exec them on the
        * server and then feed back the user. */
       char *cmd = NULL, *cmdline = NULL;
       char *param = NULL, *tmp = NULL;
-      int i, nparams;
       int cmd_len, full_len;
       int allocated = 0;
       int bufsize = 128;
+      int start_pos = argc - arglen;
+      int plen, i;
 
-      cmd = argv[1];
-      nparams = argc - 2;
+      cmd = argv[start_pos];
       cmd_len = strlen (cmd);
       full_len = cmd_len;
 
@@ -216,42 +219,37 @@ main (int argc, char **argv)
       cmdline[cmd_len] = ' ';
       full_len++;
 
-      if (argc > 2)
+      /* Yes, we have params to collect. */
+      for (i = 1; i < arglen; i++)
         {
-          int plen;
+          /* The `_escape_param()' also returns the size of the
+           * string. */
+          param = _escape_param (argv[start_pos + i], &plen);
 
-          /* Yes, we have params to collect. */
-          for (i = 2; i < argc; i++)
+          /* Allocatting more space if it's needed */
+          if ((full_len + plen) > allocated)
             {
-              /* The `_escape_param()' also returns the size of the
-               * string. */
-              param = _escape_param (argv[i], &plen);
-
-              /* Allocatting more space if it's needed */
-              if ((full_len + plen) > allocated)
+              while (allocated < full_len + plen)
+                allocated += bufsize;
+              if ((tmp = realloc (cmdline, allocated)) == NULL)
                 {
-                  while (allocated < full_len + plen)
-                    allocated += bufsize;
-                  if ((tmp = realloc (cmdline, allocated)) == NULL)
-                    {
-                      free (cmdline);
-                      close (s);
-                      exit (EXIT_FAILURE);
-                    }
-                  else
-                    cmdline = tmp;
+                  free (cmdline);
+                  close (s);
+                  exit (EXIT_FAILURE);
                 }
-
-              /* Copying parameter to the command line string */
-              memcpy (cmdline + full_len, param, plen);
-
-              /* Adding the space after param */
-              full_len += plen;
-              cmdline[full_len] = ' ';
-              full_len++;
-
-              free (param);
+              else
+                cmdline = tmp;
             }
+
+          /* Copying parameter to the command line string */
+          memcpy (cmdline + full_len, param, plen);
+
+          /* Adding the space after param */
+          full_len += plen;
+          cmdline[full_len] = ' ';
+          full_len++;
+
+          free (param);
         }
       cmdline[--full_len] = '\0';
 

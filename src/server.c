@@ -619,12 +619,11 @@ bitu_server_run (bitu_server_t *server)
         }
       ta_log_info (server->app->logger, "Client connected");
 
-      /* Initializing variables that are going to be used when
-       * allocating space to store the whole command received via
-       * socket */
-
       while (1)
         {
+          /* Initializing variables that are going to be used when
+           * allocating space to store the whole command received via
+           * socket. */
           full_len = allocated = 0;
           str = NULL;
           timeout = -1;

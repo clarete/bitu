@@ -1,0 +1,27 @@
+version 0.2
+-----------
+
+  * Fixes in command line parsing of bituctl. Now option params
+    starting with -- are not interpreted as bitU commands.
+
+  * Improvement of cmdline validation in function
+    `bitu_util_extract_params()'. Now it tests the string size before
+    anything.
+
+  * Fixed connection problems between local server and bituctl. This
+    makes our interactive shell work again! A light clean up was done
+    in the shell code too.
+
+  * Readline history enabled on bituctl. Now it remembers last
+    commands called. Everything is stored in the `~/.bituctlhistory'
+    file.
+
+  * Saving the pid of the main program when starting with a pid file
+    configured (via cmd line or config file, both works).
+
+  * Fixing a segfault in `bitu_plugin_ctx_get_list()'.
+
+  * Added/fixed --version and --help options to both bitu and bituctl
+    binaries. Their usage() functions were added/improved too.
+
+  * Handling SIGTERM in the main program just like SIGINT.

@@ -156,6 +156,8 @@ bitu_plugin_ctx_get_list (bitu_plugin_ctx_t *plugin_ctx)
   void *iter;
   ta_list_t *ret = NULL;
   iter = hashtable_iter (plugin_ctx->plugins);
+  if (iter == NULL)
+    return NULL;
   do
     ret = ta_list_append (ret, hashtable_iter_key (iter));
   while ((iter = hashtable_iter_next (plugin_ctx->plugins, iter)));

@@ -183,8 +183,11 @@ cmd_list (bitu_server_t *server, char **params, int num_params)
 
       /* Removing the last \n. It is not needed in the end of the
        * string */
-      memcpy (ret + full_size - 1, "\b", 1);
-      ta_list_free (plugins);
+      if (ret != NULL)
+        {
+          memcpy (ret + full_size - 1, "\0", 1);
+          ta_list_free (plugins);
+        }
     }
   else if (strcmp (action, "commands") == 0)
     {
@@ -192,6 +195,8 @@ cmd_list (bitu_server_t *server, char **params, int num_params)
       char *val, *tmp, *current_pos_str;
       size_t val_size, current_pos, full_size = 0;
       iter = hashtable_iter (server->commands);
+      if (iter == NULL)
+        return NULL;
       do
         {
           val = hashtable_iter_key (iter);

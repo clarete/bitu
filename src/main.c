@@ -19,10 +19,13 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
 #include <getopt.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <glob.h>
 #include <iksemel.h>
@@ -164,6 +167,37 @@ _setup_sigaction (bitu_app_t *app)
     ta_log_warn (app->logger, "Unable to install sigaction to catch SIGINT");
 }
 
+/* Save the pid file */
+static void
+_save_pid (bitu_app_t *app, const char *pid_file)
+{
+  struct stat st;
+  int pidfd, stresult;
+  pid_t pid;
+  char pidbuf[32];
+  size_t pidlen;
+
+  stresult = stat (pid_file, &st);
+  if (stresult == -1 && errno != ENOENT)
+    {
+      ta_log_warn (app->logger, "Unable to stat pid file: %s",
+                   strerror (errno));
+      return;
+    }
+  if ((pidfd = open (pid_file, O_WRONLY | O_CREAT,
+                     S_IRUSR | S_IWUSR | S_IRGRP)) == -1)
+    {
+      ta_log_warn (app->logger, "Unable to write pid to file `%s': %s",
+                   pid_file, strerror (errno));
+      return;
+    }
+
+  pid = getpid ();
+  pidlen = snprintf (pidbuf, 32, "%d", pid);
+  write (pidfd, pidbuf, pidlen);
+  close (pidfd);
+}
+
 static void
 usage (const char *prname)
 {
@@ -180,6 +214,7 @@ main (int argc, char **argv)
   ta_list_t *commands = NULL, *tmp = NULL;
   char *jid = NULL, *passwd = NULL, *host = NULL;
   char *config_file = NULL, *sock_path = NULL;
+  char *pid_file = NULL;
   int port = 0;
   int daemonize = 0;
   int c;
@@ -280,6 +315,8 @@ main (int argc, char **argv)
             port = atoi (entry->params[0]);
           else if (strcmp (entry->cmd, "server-sock-path") == 0)
             sock_path = entry->params[0];
+          else if (strcmp (entry->cmd, "pid-file") == 0)
+            pid_file = strdup (entry->params[0]);
           else if (strcmp (entry->cmd, "include") == 0)
             config_file = strdup (entry->params[0]);
           else
@@ -384,6 +421,10 @@ main (int argc, char **argv)
         }
     }
 
+  /* Saving the pid file, if requested by any configuration file */
+  if (pid_file != NULL)
+    _save_pid (app, pid_file);
+
   /* Connecting */
   if (!ta_xmpp_client_connect (app->xmpp))
     {
@@ -418,6 +459,12 @@ main (int argc, char **argv)
   if (app->logfd > 0)
     close (app->logfd);
   free (app);
+
+  if (pid_file != NULL)
+    {
+      unlink (pid_file);
+      free (pid_file);
+    }
 
   return 0;
 }

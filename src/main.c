@@ -17,6 +17,7 @@
  */
 
 #define _GNU_SOURCE
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -203,8 +204,28 @@ _save_pid (bitu_app_t *app, const char *pid_file)
 static void
 usage (const char *prname)
 {
-  printf ("Usage: %s [--jid=JID --password=PASSWD --host=HOST, --port=PORT, --config-file=FILE]\n",
-          prname);
+  printf ("Usage: %s [OPTIONS]\n", prname);
+  printf ("  All connection and server (except daemonize) can be described\n");
+  printf ("  in a config file. You will need to inform, at least, jid and\n");
+  printf ("  password to start bitU.\n\n");
+  printf ("General Options:\n");
+  printf ("  -c,--config-file=FILE\n");
+  printf ("  -v,--version\t\t\t: Show current version and exit\n");
+  printf ("  -h,--help\t\t\t: Shows this help\n\n");
+  printf ("Connection Options:\n");
+  printf ("  -j,--jid=JID\t\t\t: Valid and already registered JID\n");
+  printf ("  -p,--password=PASSWD\t\t: Jabber password\n");
+  printf ("  -H,--host=HOST\t\t: Host addr, use only if host does not support "
+          "SRV records\n");
+  printf ("  -P,--port=PORT\t\t: Port number. Defaults to 5222\n\n");
+  printf ("Server Options:\n");
+  printf ("  -s,--server-socket=PATH\t: UNIX socket path of the config "
+          "server\n");
+  printf ("  -i,--pid-file=PATH\t\t: Path to store the pid. Useful when "
+          "running as daemon\n");
+  printf ("  -d,--daemonize\t\t: Send the program to background after "
+          "starting\n\n");
+  printf ("Report bugs to " PACKAGE_BUGREPORT "\n\n");
 }
 
 int

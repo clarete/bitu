@@ -261,6 +261,7 @@ main (int argc, char **argv)
   while (1)
     {
       char *line;
+      size_t llen;
 
       /* Main readline call.*/
       line = readline (PS1);
@@ -271,22 +272,28 @@ main (int argc, char **argv)
           printf ("\n");
           break;
         }
-      if (strlen (line) == 0)
+      llen = strlen (line);
+
+      /* Handling empty lines */
+      if (llen == 0)
         continue;
-      else if (strcmp (line, "exit") == 0)
+
+      /* Sending command to the server. */
+      if (send (s, line, llen, 0) == -1)
         {
-          _close_connection (s);
-          break;
+          fprintf (stderr, "Error in send(): %s\n",
+                   strerror (errno));
+          goto finalize;
         }
-      else
+
+      /* The only hardcoded command is this. It was actually sent to
+       * the server but we should not wait for an answer in this
+       * case. It is easier to catch it here, to finish the program
+       * then implementing a full local command framework again. */
+      if (strcmp (line, "exit") == 0)
         {
-          len = strlen (line);
-          if (send (s, line, len, 0) == -1)
-            {
-              fprintf (stderr, "Error in send(): %s\n",
-                       strerror (errno));
-              goto finalize;
-            }
+          free (line);
+          goto finalize;
         }
       free (line);
 

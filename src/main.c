@@ -209,7 +209,7 @@ usage (const char *prname)
   printf ("  in a config file. You will need to inform, at least, jid and\n");
   printf ("  password to start bitU.\n\n");
   printf ("General Options:\n");
-  printf ("  -c,--config-file=FILE\n");
+  printf ("  -c,--config-file=FILE\t\t: Path to the config file\n");
   printf ("  -v,--version\t\t\t: Show current version and exit\n");
   printf ("  -h,--help\t\t\t: Shows this help\n\n");
   printf ("Connection Options:\n");

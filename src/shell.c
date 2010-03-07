@@ -156,6 +156,21 @@ _save_history_file (void)
   free (hfile);
 }
 
+static void
+usage (const char *prname)
+{
+  printf ("Usage: %s [OPTIONS]\n", prname);
+  printf ("  bituctl is a helper program that sends commands to a already\n");
+  printf ("  running bitU instance.\n\n");
+  printf ("General Options:\n");
+  printf ("  -s,--server-socket=PATH\t: Path to the socket file that server "
+          "is listening to\n");
+  printf ("  -v,--version\t\t\t: Show current version and exit\n");
+  printf ("  -h,--help\t\t\t: Shows this help\n\n");
+
+  printf ("Report bugs to " PACKAGE_BUGREPORT "\n\n");
+}
+
 int
 main (int argc, char **argv)
 {
@@ -168,16 +183,28 @@ main (int argc, char **argv)
   int c;
   static struct option long_options[] = {
     { "server-socket", required_argument, NULL, 's' },
+    { "version", no_argument, NULL, 'v' },
+    { "help", no_argument, NULL, 'h' },
     { 0, 0, 0, 0 }
   };
 
-  while ((c = getopt_long (argc, argv, "s:", long_options, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "s:hv", long_options, NULL)) != -1)
     {
       switch (c)
         {
         case 's':
           socket_path = optarg;
           arglen--;
+          break;
+
+        case 'h':
+          usage (argv[0]);
+          exit (EXIT_SUCCESS);
+          break;
+
+        case 'v':
+          printf ("bitU v" VERSION " \n");
+          exit (EXIT_SUCCESS);
           break;
 
         default:

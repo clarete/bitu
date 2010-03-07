@@ -136,6 +136,26 @@ _close_connection (int socket)
              strerror (errno));
 }
 
+static char *
+_get_history_file ()
+{
+  char *home;
+  char hist_file[256];
+  home = getenv ("HOME");
+  if (home == NULL)
+    home = "~";
+  snprintf (hist_file, 256, "%s/.bituctlhistory", home);
+  return strdup (hist_file);
+}
+
+static void
+_save_history_file (void)
+{
+  char *hfile = _get_history_file ();
+  write_history (hfile);
+  free (hfile);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -143,6 +163,7 @@ main (int argc, char **argv)
   struct sockaddr_un remote;
   socklen_t len;
   char *socket_path = NULL;
+  char *hfile;
   int arglen = argc - 1;
   int c;
   static struct option long_options[] = {
@@ -258,6 +279,14 @@ main (int argc, char **argv)
   printf ("bitU v" VERSION " interactive shell connected!\n");
   printf ("Type `help' for more information\n");
 
+  /* Initializing history library and registering a callback to write
+   * back to history file when program finishes. */
+  hfile = _get_history_file ();
+  using_history ();
+  read_history (hfile);
+  atexit (_save_history_file);
+  free (hfile);
+
   while (1)
     {
       char *line;
@@ -277,6 +306,9 @@ main (int argc, char **argv)
       /* Handling empty lines */
       if (llen == 0)
         continue;
+
+      /* Saving readline history */
+      add_history (line);
 
       /* Sending command to the server. */
       if (send (s, line, llen, 0) == -1)

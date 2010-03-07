@@ -247,13 +247,15 @@ main (int argc, char **argv)
     { "host", required_argument, NULL, 'H' },
     { "port", required_argument, NULL, 'P' },
     { "server-socket", required_argument, NULL, 's' },
+    { "pid-file", required_argument, NULL, 'i' },
     { "config-file", required_argument, NULL, 'c' },
     { "daemonize", no_argument, NULL, 'd' },
+    { "version", no_argument, NULL, 'v' },
     { "help", no_argument, NULL, 'h' },
     { 0, 0, 0, 0 }
   };
 
-  while ((c = getopt_long (argc, argv, "j:p:H:P:c:d",
+  while ((c = getopt_long (argc, argv, "j:p:H:P:c:dhvi:",
                            long_options, NULL)) != -1)
     {
       switch (c)
@@ -282,8 +284,17 @@ main (int argc, char **argv)
           config_file = strdup (optarg);
           break;
 
+        case 'i':
+          pid_file = strdup (optarg);
+          break;
+
         case 'h':
           usage (argv[0]);
+          exit (EXIT_SUCCESS);
+          break;
+
+        case 'v':
+          printf ("bitU v" VERSION " \n");
           exit (EXIT_SUCCESS);
           break;
 
@@ -338,7 +349,7 @@ main (int argc, char **argv)
             port = atoi (entry->params[0]);
           else if (strcmp (entry->cmd, "server-sock-path") == 0)
             sock_path = entry->params[0];
-          else if (strcmp (entry->cmd, "pid-file") == 0)
+          else if (strcmp (entry->cmd, "pid-file") == 0 && pid_file == NULL)
             pid_file = strdup (entry->params[0]);
           else if (strcmp (entry->cmd, "include") == 0)
             config_file = strdup (entry->params[0]);

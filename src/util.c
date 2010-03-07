@@ -61,6 +61,11 @@ bitu_util_extract_params (const char *line, char **cmd,
   s = bitu_util_strstrip (line_tmp);
 
   full_len = strlen (s);
+  if (full_len == 0)
+    {
+      free (line_tmp);
+      return 0;
+    }
   for (i = 0; i <= full_len; i++)
     {
       if (s[i] == '\"' && s[i-1] != '\\')

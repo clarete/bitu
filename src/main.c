@@ -165,6 +165,8 @@ _setup_sigaction (bitu_app_t *app)
   sigemptyset (&sa.sa_mask);
   if (sigaction (SIGINT, &sa, NULL) == -1)
     ta_log_warn (app->logger, "Unable to install sigaction to catch SIGINT");
+  if (sigaction (SIGTERM, &sa, NULL) == -1)
+    ta_log_warn (app->logger, "Unable to install sigaction to catch SIGTERM");
 }
 
 /* Save the pid file */

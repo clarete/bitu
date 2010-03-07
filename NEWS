@@ -25,3 +25,5 @@ version 0.2
     binaries. Their usage() functions were added/improved too.
 
   * Handling SIGTERM in the main program just like SIGINT.
+
+  * Adding a pkg-config file to the libbitu

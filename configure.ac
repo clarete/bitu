@@ -34,6 +34,7 @@ AC_SUBST([TANINGIA_CFLAGS])
 AC_SUBST([TANINGIA_LIBS])
 
 AC_CONFIG_FILES([
+        libbitu.pc
         Makefile
         include/Makefile
         include/bitu/Makefile

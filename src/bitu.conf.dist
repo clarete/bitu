@@ -16,7 +16,7 @@ pid-file /tmp/bitu.pid
 # Log stuff
 # ---------
 set-log-file /tmp/bitu.log
-set-log-level DEBUG INFO WARN ERROR CRITICAL
+set-log-level DEBUG
 set-log-use-colors true
 
 # Plugin secton

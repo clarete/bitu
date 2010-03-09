@@ -288,32 +288,30 @@ cmd_set_log_level (bitu_server_t *server, char **params, int nparams)
 {
   char *tok = NULL;
   char *error = NULL;
-  int flags = 0, i = 0;
+  ta_log_level_t level;
   ta_log_t *logger;
 
   if ((error = _validate_min_num_params ("set-log-level", 1, nparams)) != NULL)
     return error;
-  for (i = 0; i < nparams; i++)
-    {
-      tok = params[i];
 
-      if (strcmp (tok, "DEBUG") == 0)
-        flags |= TA_LOG_DEBUG;
-      else if (strcmp (tok, "INFO") == 0)
-        flags |= TA_LOG_INFO;
-      else if (strcmp (tok, "WARN") == 0)
-        flags |= TA_LOG_WARN;
-      else if (strcmp (tok, "ERROR") == 0)
-        flags |= TA_LOG_ERROR;
-      else if (strcmp (tok, "CRITICAL") == 0)
-        flags |= TA_LOG_CRITICAL;
-    }
+  tok = params[0];
+
+  if (strcmp (tok, "DEBUG") == 0)
+    level = TA_LOG_DEBUG;
+  else if (strcmp (tok, "INFO") == 0)
+    level = TA_LOG_INFO;
+  else if (strcmp (tok, "WARN") == 0)
+    level = TA_LOG_WARN;
+  else if (strcmp (tok, "ERROR") == 0)
+    level = TA_LOG_ERROR;
+  else if (strcmp (tok, "CRITICAL") == 0)
+    level = TA_LOG_CRITICAL;
 
   logger = server->app->logger;
-  ta_log_set_level (logger, flags);
+  ta_log_set_level (logger, level);
 
   logger = ta_xmpp_client_get_logger (server->app->xmpp);
-  ta_log_set_level (logger, flags);
+  ta_log_set_level (logger, level);
 
   return NULL;
 }

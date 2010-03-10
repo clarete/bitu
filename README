@@ -50,7 +50,7 @@ Now follow the next stuff to install taningia.
  To install it, you should first download it using the following
  command::
 
-     $ git clone http://git.alfaiati.net/lincoln/taningia.git
+     $ git clone http://git.comum.org/lincoln/taningia.git
 
  After that, enter in the downloaded directory and run the autogen.sh
  script, like this::
@@ -118,14 +118,16 @@ Loading plugins
 
 We currently have two builtin plugins. The cpuinfo and the uptime
 ones. Both are installed in $(libdir)/bitu. To use them, you will have
-to create a new file with the name of the .so files. Like this::
+to load them to bitu. We have two ways for doing this. The first is to
+create a config file and append something like this to the config
+file::
 
-  libprocessor.so
-  libuptime.so
+  load libprocessor.so
+  load libuptime.so
 
-Save the file with any name anywhere. Now, you have to make sure that
-the $(libdir)/bitu dir is inside LD_LIBRARY_PATH envvar. Do the
-following to make sure::
+Save the config file with any name anywhere. Now, you have to make
+sure that the $(libdir)/bitu dir is inside LD_LIBRARY_PATH envvar. Do
+the following to make sure::
 
   $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/your/lib/bitu
 
@@ -140,7 +142,7 @@ with the plugin list file. Like this::
 
      $ bitu --jid=server@localhost \
           --password=<yourpasswd>  \
-          --plugins-file=/path-to-your-plugins-file
+          --config-file=/path-to-your-config-file
 
 If you receive any ConnectionError stuff, try to inform the host ip
 with the param --host. like this::
@@ -148,4 +150,21 @@ with the param --host. like this::
      $ bitu --jid=server@localhost \
           --password=<yourpasswd>  \
           --host=127.0.0.1 \
-          --plugins-file=/path-to-your-plugins-file
+          --plugins-config=/path-to-your-config-file
+
+Read more about configuration at the next section.
+
+Notes about configuration
+-------------------------
+
+Bitu is a xmpp bot so presence is an intrisec concept. To make it
+available all the time, configuration must be changed at the runtime
+with no need to restart anything.
+
+There are some few configuration parameters that you will not be able
+to change while bitU is running. Like the jid, password, host and
+local server configuration. All other commands are possible to run
+using a helper program called bituctl.
+
+There are plans to listen to the SIGHUP and reload config when catch
+it.

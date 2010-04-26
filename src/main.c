@@ -77,7 +77,7 @@ auth_failed_cb (ta_xmpp_client_t *client, void *data)
 static int
 message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 {
-  char *rawmsg, *cmd = NULL, *message = NULL;
+  char *rawmsg, *rawbody, *cmd = NULL, *message = NULL;
   char **params = NULL;
   int i, len;
   iks *answer;
@@ -87,7 +87,10 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 
   plugin_ctx = (bitu_plugin_ctx_t *) data;
 
-  rawmsg = strdup (iks_find_cdata (pak->x, "body"));
+  rawbody = iks_find_cdata (pak->x, "body");
+  if (rawbody == NULL)
+    return 0;
+  rawmsg = strdup (rawbody);
   if (!bitu_util_extract_params (rawmsg, &cmd, &params, &len))
     {
       message = malloc (msgbufsize);

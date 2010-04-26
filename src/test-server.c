@@ -52,8 +52,8 @@ main (int argc, char **argv)
 
   /* Time to free everything related to the server and app stuff. */
   bitu_server_free (server);    /* app will not be touched here */
-  ta_log_free (app->logger);
-  ta_xmpp_client_free (app->xmpp);
+  ta_object_unref (app->logger);
+  ta_object_unref (app->xmpp);
   bitu_plugin_ctx_free (app->plugin_ctx);
   free (app);
 

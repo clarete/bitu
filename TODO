@@ -10,6 +10,8 @@ tickets in a bts, I hope.
 Core
 ----
 
+ * Implement pipes between jid's
+
  * Implement a loader switch
 
  * Implement a python loader

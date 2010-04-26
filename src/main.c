@@ -486,8 +486,8 @@ main (int argc, char **argv)
 
  finalize:
   bitu_plugin_ctx_free (app->plugin_ctx);
-  ta_xmpp_client_free (app->xmpp);
-  ta_log_free (app->logger);
+  ta_object_unref (app->xmpp);
+  ta_object_unref (app->logger);
   if (app->logfile)
     free (app->logfile);
   if (app->logfd > 0)

@@ -160,8 +160,8 @@ static void
 usage (const char *prname)
 {
   printf ("Usage: %s [OPTIONS]\n", prname);
-  printf ("  bituctl is a helper program that sends commands to a already\n");
-  printf ("  running bitU instance.\n\n");
+  printf ("  bituctl is a helper program that sends commands to an\n");
+  printf ("  already running bitU instance.\n\n");
   printf ("General Options:\n");
   printf ("  -s,--server-socket=PATH\t: Path to the socket file that server "
           "is listening to\n");

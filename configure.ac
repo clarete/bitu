@@ -6,11 +6,14 @@ AC_INIT([bitu], [0.3], [lincoln@comum.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
+AM_INIT_AUTOMAKE(foreign)
+LT_INIT
+
+AM_SILENT_RULES([yes])
 
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_LIBTOOL
-AM_INIT_AUTOMAKE(foreign)
 
 # Checks for libraries.
 

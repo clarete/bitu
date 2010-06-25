@@ -18,6 +18,8 @@ AC_PROG_LIBTOOL
 AC_PROG_RANLIB
 
 # Checks for libraries.
+AC_CHECK_LIB([readline], [readline])
+AC_CHECK_LIB([dl], [dlopen])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h fcntl.h sys/socket.h])

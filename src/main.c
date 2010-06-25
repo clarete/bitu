@@ -137,8 +137,16 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 static int
 presence_noticed_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 {
+  ikstack *stack;
+  iksid *client_id;
+  int give_up;
+
   /* We don't need to handle our own presence request. */
-  if (strcmp (pak->from->partial, ta_xmpp_client_get_jid (client)) == 0)
+  stack = iks_stack_new (255, 64);
+  client_id = iks_id_new (stack, ta_xmpp_client_get_jid (client));
+  give_up = strcmp (pak->from->partial, client_id->partial) == 0;
+  iks_stack_delete (stack);
+  if (give_up)
     return 0;
 
   /* TODO: A good idea here is to read a whitelist from a file or from

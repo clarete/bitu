@@ -8,7 +8,7 @@ bin_PROGRAMS = bitu bituctl
 
 bitu_SOURCES = main.c
 bitu_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
-bitu_LDADD = $(TANINGIA_LIBS) ./libbitu.la
+bitu_LDADD = $(TANINGIA_LIBS) $(IKSEMEL_LIBS) ./libbitu.la
 
 bituctl_SOURCES = shell.c
 bituctl_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
@@ -22,7 +22,7 @@ test_plugin_LDADD = $(TANINGIA_LIBS) ./libbitu.la -ldl
 
 test_server_SOURCES = test-server.c
 test_server_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
-test_server_LDADD = ./libbitu.la -ldl
+test_server_LDADD = ./libbitu.la $(TANINGIA_LIBS) $(IKSEMEL_LIBS) -ldl
 
 test_util_SOURCES = test-util.c
 test_util_CFLAGS = -I$(top_srcdir)/include

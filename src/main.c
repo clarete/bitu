@@ -31,6 +31,7 @@
 #include <glob.h>
 #include <iksemel.h>
 #include <taningia/taningia.h>
+#include <taningia/srv.h>
 #include <bitu/app.h>
 #include <bitu/util.h>
 #include <bitu/loader.h>
@@ -239,6 +240,27 @@ usage (const char *prname)
   printf ("Report bugs to " PACKAGE_BUGREPORT "\n\n");
 }
 
+static void
+_query_service (const char *query, char **host, int *port)
+{
+  int i;
+  ta_srv_target_t *t = NULL;
+  ta_list_t
+    *tmp = NULL,
+    *answer = ta_srv_query_domain ("_xmpp-client._tcp", query);
+  for (tmp = answer, i = 0; tmp; tmp = tmp->next, i++)
+    {
+      if (i == 0)
+        {
+          t = (ta_srv_target_t *) answer->data;
+          *host = strdup (ta_srv_target_get_host (t));
+          *port = ta_srv_target_get_port (t);
+        }
+      ta_object_unref (t);
+    }
+  ta_list_free (answer);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -380,7 +402,10 @@ main (int argc, char **argv)
     {
       ikstack *stack = iks_stack_new (255, 64);
       iksid *id = iks_id_new (stack, jid);
-      host = strdup (id->server);
+
+      /* Trying to resolve the srv name */
+      ta_srv_init ();
+      _query_service (id->server, &host, &port);
       iks_stack_delete (stack);
     }
   if (sock_path == NULL)

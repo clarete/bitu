@@ -8,8 +8,6 @@
 # change something in this section.
 jid server@localhost
 password server
-host 127.0.0.1
-port 5222
 server-sock-path /tmp/bitu.sock
 pid-file /tmp/bitu.pid
 

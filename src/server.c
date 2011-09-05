@@ -257,12 +257,11 @@ cmd_set_log_file (bitu_server_t *server, char **params, int nparams)
 
   if (logfd == -1)
     {
-      int size;
       size_t bufsize = 128;
       error = malloc (bufsize);
-      size = snprintf (error, bufsize,
-                       "Unable to open file log file `%s': %s",
-                       server->app->logfile, strerror (errno));
+      snprintf (error, bufsize,
+                "Unable to open file log file `%s': %s",
+                server->app->logfile, strerror (errno));
       ta_log_error (server->app->logger, error);
       return error;
     }
@@ -496,22 +495,20 @@ bitu_server_exec_cmd_line (bitu_server_t *server, const char *cmdline)
 {
   char *cmd = NULL, *answer = NULL;
   char **params = NULL;
-  int msg_size, msgbufsize = 128;
+  int msgbufsize = 128;
   int num_params;
 
   answer = malloc (msgbufsize);
   if (cmdline == NULL)
     {
-      msg_size =
-        snprintf (answer, msgbufsize, "Empty command line");
+      snprintf (answer, msgbufsize, "Empty command line");
       ta_log_warn (server->app->logger, answer);
     }
   else
     {
       if (!bitu_util_extract_params (cmdline, &cmd, &params, &num_params))
         {
-          msg_size =
-            snprintf (answer, msgbufsize, "Command seems to be empty");
+          snprintf (answer, msgbufsize, "Command seems to be empty");
           ta_log_warn (server->app->logger, answer);
         }
       else

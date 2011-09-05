@@ -32,7 +32,7 @@ struct bitu_plugin
   void *handle;
   const char *(*name) (void);
   int (*num_params) (void);
-  char *(*message_return) (void);
+  char *(*execute) (char **);
 };
 
 struct bitu_plugin_ctx
@@ -53,9 +53,9 @@ bitu_plugin_num_params (bitu_plugin_t *plugin)
 }
 
 char *
-bitu_plugin_message_return (bitu_plugin_t *plugin)
+bitu_plugin_execute (bitu_plugin_t *plugin, char **params)
 {
-  return plugin->message_return ();
+  return plugin->execute (params);
 }
 
 void
@@ -84,7 +84,7 @@ bitu_plugin_load (const char *lib)
 
   plugin->name = dlsym (plugin->handle, "plugin_name");
   plugin->num_params = dlsym (plugin->handle, "plugin_num_params");
-  plugin->message_return = dlsym (plugin->handle, "plugin_message_return");
+  plugin->execute = dlsym (plugin->handle, "plugin_execute");
 
   return plugin;
 }

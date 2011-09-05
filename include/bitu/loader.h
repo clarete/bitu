@@ -28,7 +28,7 @@ bitu_plugin_t *bitu_plugin_load (const char *lib);
 void bitu_plugin_free (bitu_plugin_t *plugin);
 const char *bitu_plugin_name (bitu_plugin_t *plugin);
 int bitu_plugin_num_params (bitu_plugin_t *plugin);
-char *bitu_plugin_message_return (bitu_plugin_t *plugin);
+char *bitu_plugin_execute (bitu_plugin_t *plugin, char **params);
 
 bitu_plugin_ctx_t *bitu_plugin_ctx_new (void);
 void bitu_plugin_ctx_free (bitu_plugin_ctx_t *plugin_ctx);

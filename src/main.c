@@ -115,7 +115,7 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
                     len);
         }
       else
-        message = bitu_plugin_message_return (plugin);
+        message = bitu_plugin_execute (plugin, params);
     }
 
   /* Feeding back the user */

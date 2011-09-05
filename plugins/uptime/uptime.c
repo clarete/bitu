@@ -33,7 +33,7 @@ plugin_num_params (void)
 }
 
 char *
-plugin_message_return (void)
+plugin_execute (void)
 {
   int bufsize = 1024;
   char message[bufsize];

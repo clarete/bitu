@@ -31,6 +31,6 @@ const char *plugin_name (void);
 
 int plugin_num_params (void);
 
-char *plugin_message_return (void);
+char *plugin_execute (void);
 
 #endif /* BITU_CPUINFO_H_ */

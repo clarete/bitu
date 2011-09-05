@@ -112,7 +112,7 @@ plugin_num_params (void)
 }
 
 char *
-plugin_message_return (void)
+plugin_execute (void)
 {
   char *ret = NULL;
   int num_procs, i;

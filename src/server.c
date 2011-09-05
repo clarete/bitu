@@ -46,6 +46,7 @@ struct _bitu_server
   bitu_app_t *app;
   unsigned int sock;
   hashtable_t *commands;
+  hashtable_t *env;
   int can_run;
 };
 
@@ -73,6 +74,73 @@ _validate_min_num_params (const char *cmd, int x, int y)
       return error;
     }
   return NULL;
+}
+
+static char *
+cmd_set (bitu_server_t *server, char **params, int num_params)
+{
+  char *error;
+  if ((error = _validate_num_params ("set", 2, num_params)) != NULL)
+    return error;
+  hashtable_set (server->env, strdup (params[0]), strdup (params[1]));
+  return NULL;
+}
+
+static char *
+cmd_get (bitu_server_t *server, char **params, int num_params)
+{
+  char *error, *val;
+  if ((error = _validate_num_params ("set", 1, num_params)) != NULL)
+    return error;
+  val = hashtable_get (server->env, params[0]);
+  return val ? strdup (val) : NULL;
+}
+
+static char *
+cmd_unset (bitu_server_t *server, char **params, int num_params)
+{
+  char *error;
+  if ((error = _validate_num_params ("unset", 1, num_params)) != NULL)
+    return error;
+  hashtable_del (server->env, params[0]);
+  return NULL;
+}
+
+static char *
+cmd_env (bitu_server_t *server, char **params, int num_params)
+{
+  void *iter;
+  char *error, *val, *tmp, *pos, *list = NULL;
+  size_t val_size, current_size = 0, full_size = 0, step = 256, lastp = 0;
+  if ((error = _validate_num_params ("env", 0, num_params)) != NULL)
+    return error;
+  iter = hashtable_iter (server->env);
+  if (iter == NULL)
+    return NULL;
+  do
+    {
+      val = hashtable_iter_key (iter);
+      val_size = strlen (val);
+      current_size += val_size + 1;
+      if (full_size < current_size)
+        {
+          full_size += step;
+          if ((tmp = realloc (list, full_size)) == NULL)
+            {
+              free (list);
+              return NULL;
+            }
+          else
+            list = tmp;
+        }
+      pos = list + lastp;
+      memcpy (pos, val, val_size);
+      memcpy (pos+val_size, "\n", 1);
+      lastp += val_size + 1;
+    }
+  while ((iter = hashtable_iter_next (server->env, iter)));
+  list[current_size-1] = '\0';
+  return list;
 }
 
 static char *
@@ -380,10 +448,15 @@ bitu_server_new (const char *sock_path, bitu_app_t *app)
   server->sock_path = strdup (sock_path);
   server->app = app;
   server->commands = hashtable_create (hash_string, string_equal, NULL, NULL);
+  server->env = hashtable_create (hash_string, string_equal, free, free);
   server->can_run = 1;
 
   /* Registering commands */
   hashtable_set (server->commands, "load", cmd_load);
+  hashtable_set (server->commands, "set", cmd_set);
+  hashtable_set (server->commands, "get", cmd_get);
+  hashtable_set (server->commands, "unset", cmd_unset);
+  hashtable_set (server->commands, "env", cmd_env);
   hashtable_set (server->commands, "unload", cmd_unload);
   hashtable_set (server->commands, "send", cmd_send);
   hashtable_set (server->commands, "list", cmd_list);
@@ -402,6 +475,7 @@ bitu_server_free (bitu_server_t *server)
   ta_log_info (server->app->logger, "Gracefully exiting, see you!");
   ta_xmpp_client_disconnect (server->app->xmpp);
   hashtable_destroy (server->commands);
+  hashtable_destroy (server->env);
   server->can_run = 0;
   close (server->sock);
   unlink (server->sock_path);

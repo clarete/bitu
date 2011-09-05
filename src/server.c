@@ -301,8 +301,11 @@ _log_handler (ta_log_t *log, ta_log_level_t level,
               const char *data, void *user_data)
 {
   bitu_server_t *server = (bitu_server_t *) user_data;
-  write (server->app->logfd, data, strlen (data));
-  write (server->app->logfd, "\n", 1);
+  if (server->can_run)
+    {
+      write (server->app->logfd, data, strlen (data));
+      write (server->app->logfd, "\n", 1);
+    }
   return 0;
 }
 

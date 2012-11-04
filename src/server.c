@@ -715,13 +715,14 @@ bitu_server_run (bitu_server_t *server)
       int timeout;
 
       len = sizeof (struct sockaddr_un);
-      sock = accept (server->sock, (struct sockaddr *) &remote, &len);
-      if (sock == -1 && errno == EINTR)
-        {
-          ta_log_info (server->app->logger,
-                       "accept() interrupted, stopping main loop");
-          break;
-        }
+
+      /* EINTR means the the resource is not ready, so we should try
+       * agian */
+      do
+        sock = accept (server->sock, (struct sockaddr *) &remote, &len);
+      while (sock == -1 && errno == EINTR);
+
+      /* Unlucky, some thing is wrong. Report and fail */
       if (sock == -1)
         {
           ta_log_error (server->app->logger,

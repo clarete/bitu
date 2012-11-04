@@ -476,7 +476,40 @@ void
 bitu_server_free (bitu_server_t *server)
 {
   ta_log_info (server->app->logger, "Gracefully exiting, see you!");
-  ta_xmpp_client_disconnect (server->app->xmpp);
+
+  /* Cleaning up app properties */
+  if (server->app->plugin_ctx)
+    {
+      bitu_plugin_ctx_free (server->app->plugin_ctx);
+      server->app->plugin_ctx = NULL;
+    }
+  if (server->app->xmpp)
+    {
+      ta_object_unref (server->app->xmpp);
+      server->app->xmpp = NULL;
+    }
+  if (server->app->logger)
+    {
+      ta_object_unref (server->app->logger);
+      server->app->logger = NULL;
+    }
+  if (server->app->logfile)
+    {
+      free (server->app->logfile);
+      server->app->logfile = NULL;
+    }
+  if (server->app->logfd > -1)
+    {
+      close (server->app->logfd);
+      server->app->logfd = -1;
+    }
+  if (server->app)
+    {
+      free (server->app);
+      server->app = NULL;
+    }
+
+  /* Cleaning server attrs */
   hashtable_destroy (server->commands);
   hashtable_destroy (server->env);
   server->can_run = 0;
@@ -495,7 +528,7 @@ bitu_server_connect (bitu_server_t *server)
   if ((server->sock = socket (AF_UNIX, SOCK_STREAM, 0)) == -1)
     {
       ta_log_critical (server->app->logger, "Unable to open socket server");
-      return 0;
+      return TA_ERROR;
     }
 
   local.sun_family = AF_UNIX;
@@ -509,18 +542,20 @@ bitu_server_connect (bitu_server_t *server)
                        "Error when binding to socket %s: %s",
                        server->sock_path,
                        strerror (errno));
-      return 0;
+      return TA_ERROR;
     }
   if (listen (server->sock, LISTEN_BACKLOG) == -1)
     {
       ta_log_critical (server->app->logger,
                        "Error to listen to connections: %s",
                        strerror (errno));
-      return 0;
+      return TA_ERROR;
     }
 
-  ta_log_info (server->app->logger, "Local server is waiting for connections");
-  return 1;
+  ta_log_info (server->app->logger,
+               "Local server bound to the socket in %s",
+               server->sock_path);
+  return TA_OK;
 }
 
 char *

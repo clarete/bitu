@@ -58,7 +58,7 @@ extern int daemon(int, int);
  * extra params. The only operation done with it is the graceful
  * shutdown of the application. */
 
-static bitu_server_t *main_server;
+static bitu_server_t *main_server = NULL;
 
 /* XMPP client callbacks */
 
@@ -179,7 +179,11 @@ presence_noticed_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 static void
 _signal_handler (int sig, siginfo_t *si, void *data)
 {
-  bitu_server_free (main_server);
+  if (main_server)
+    {
+      bitu_server_free (main_server);
+      main_server = NULL;
+    }
 }
 
 static void
@@ -511,39 +515,24 @@ main (int argc, char **argv)
   /* Connecting */
   if (!ta_xmpp_client_connect (app->xmpp))
     {
-      ta_error_t *error;
-      error = ta_xmpp_client_get_error (app->xmpp);
-      fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
-               ta_error_get_message (error));
+      const ta_error_t *error = ta_error_last ();
+      fprintf (stderr, "%s\n", error->message);
       goto finalize;
-      return 1;
     }
 
   /* Running client */
   if (!ta_xmpp_client_run (app->xmpp, 1))
     {
-      ta_error_t *error;
-      error = ta_xmpp_client_get_error (app->xmpp);
-      fprintf (stderr, "%s: %s\n", ta_error_get_name (error),
-               ta_error_get_message (error));
+      const ta_error_t *error = ta_error_last ();
+      fprintf (stderr, "%s\n", error->message);
       goto finalize;
-      return 1;
     }
 
-  bitu_server_connect (server);
-  bitu_server_run (server);
+  if (bitu_server_connect (server) == TA_OK)
+    bitu_server_run (server);
 
  finalize:
-  bitu_plugin_ctx_free (app->plugin_ctx);
-  ta_object_unref (app->xmpp);
-  ta_object_unref (app->logger);
-  if (app->logfile)
-    free (app->logfile);
-  if (app->logfd > 0)
-    close (app->logfd);
-  free (app);
-
-  if (pid_file != NULL)
+  if (pid_file != NULL && access (pid_file, X_OK) == 0)
     {
       unlink (pid_file);
       free (pid_file);

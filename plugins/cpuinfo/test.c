@@ -24,7 +24,7 @@ int
 main (int argc, char **argv)
 {
   char *info = plugin_execute ();
-  printf (info);
+  printf ("%s", info);
   free (info);
   return 0;
 }

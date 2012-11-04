@@ -117,7 +117,7 @@ bitu_shell_recv (int sock, int timeout)
       if (n == 1)       /* Nothing to be printed out */
         break;
       buf[n] = '\0';
-      printf (buf);
+      printf ("%s", buf);
       hasdata = 1;
       full_size += n;
       timeout = 0;

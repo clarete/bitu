@@ -16,6 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef __APPLE__
+/* Not sure why, but apple folks deprecated the `daemon()' function. It
+ * still works pretty good here, so I'll just ignore this fact and go
+ * on. In the end the include directives, It is enabled it again.
+ */
+#define daemon fake_daemon
+#endif
+
 #define _GNU_SOURCE
 #include <config.h>
 #include <stdio.h>
@@ -37,6 +45,11 @@
 #include <bitu/loader.h>
 #include <bitu/server.h>
 #include <bitu/conf.h>
+
+#ifdef __APPLE__
+#undef daemon
+extern int daemon(int, int);
+#endif
 
 #define SOCKET_PATH    "/tmp/bitu.sock"
 

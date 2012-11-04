@@ -32,7 +32,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
-#include <signal.h>
 #include <getopt.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -53,12 +52,6 @@ extern int daemon(int, int);
 
 #define SOCKET_PATH    "/tmp/bitu.sock"
 
-/* This global var will only be used to manipulate the only server
- * instance running in the signal handler callback that don't accept
- * extra params. The only operation done with it is the graceful
- * shutdown of the application. */
-
-static bitu_server_t *main_server = NULL;
 
 /* XMPP client callbacks */
 
@@ -174,30 +167,6 @@ presence_noticed_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
   return 0;
 }
 
-/* Stuff to catch SIGINT and stop the bot gracefully. */
-
-static void
-_signal_handler (int sig, siginfo_t *si, void *data)
-{
-  if (main_server)
-    {
-      bitu_server_free (main_server);
-      main_server = NULL;
-    }
-}
-
-static void
-_setup_sigaction (bitu_app_t *app)
-{
-  struct sigaction sa;
-  sa.sa_flags = SA_SIGINFO;
-  sa.sa_sigaction = _signal_handler;
-  sigemptyset (&sa.sa_mask);
-  if (sigaction (SIGINT, &sa, NULL) == -1)
-    ta_log_warn (app->logger, "Unable to install sigaction to catch SIGINT");
-  if (sigaction (SIGTERM, &sa, NULL) == -1)
-    ta_log_warn (app->logger, "Unable to install sigaction to catch SIGTERM");
-}
 
 /* Save the pid file */
 static void
@@ -474,11 +443,7 @@ main (int argc, char **argv)
   /* Initializing the local server that will handle configuration
    * interaction. */
   server = bitu_server_new (sock_path, app);
-  main_server = server;
   free (sock_path);
-
-  /* Function that install the sigaction that will handle signals */
-  _setup_sigaction (app);
 
   /* Running all commands found in the config file. */
   for (tmp = commands; tmp; tmp = tmp->next)

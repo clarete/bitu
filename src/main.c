@@ -81,6 +81,55 @@ auth_failed_cb (ta_xmpp_client_t *client, void *data)
   return 0;
 }
 
+static void
+_execute_plugin (bitu_server_t *server,
+                 char *cmd,
+                 char **params,
+                 int len,
+                 char **message)
+{
+  bitu_app_t *app;
+  bitu_plugin_ctx_t *plugin_ctx;
+  bitu_plugin_t *plugin;
+  int msgbufsize = 128;
+
+  app = bitu_server_get_app (server);
+  plugin_ctx = app->plugin_ctx;
+
+  if ((plugin = bitu_plugin_ctx_find (plugin_ctx, cmd)) == NULL)
+    {
+      *message = malloc (msgbufsize);
+      snprintf (*message, msgbufsize, "Plugin `%s' not found", cmd);
+    }
+  else
+    {
+      /* Validating number of parameters */
+      if (bitu_plugin_num_params (plugin) != len)
+        {
+          *message = malloc (msgbufsize);
+          snprintf (*message, msgbufsize,
+                    "Wrong number of parameters. `%s' "
+                    "receives %d but %d were passed", cmd,
+                    bitu_plugin_num_params (plugin),
+                    len);
+        }
+      else
+        *message = bitu_plugin_execute (plugin, params);
+    }
+}
+
+static void
+_execute_command (bitu_server_t *server,
+                  char *cmd,
+                  char **params,
+                  int len,
+                  char **message)
+{
+  char *c = cmd;
+  /* skipping the '/' */
+  *message = bitu_server_exec_cmd (server, &(*++c), params, len, NULL);
+}
+
 static int
 message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 {
@@ -88,39 +137,26 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
   char **params = NULL;
   int i, len;
   iks *answer;
-  bitu_plugin_t *plugin;
-  bitu_plugin_ctx_t *plugin_ctx;
-  int msgbufsize = 128;
+  bitu_server_t *server;
 
-  plugin_ctx = (bitu_plugin_ctx_t *) data;
+  server = (bitu_server_t *) data;
 
   rawbody = iks_find_cdata (pak->x, "body");
   if (rawbody == NULL)
     return 0;
+
   if (!bitu_util_extract_params (rawbody, &cmd, &params, &len))
     {
+      int msgbufsize = 128;
       message = malloc (msgbufsize);
       snprintf (message, msgbufsize, "The message seems to be empty");
     }
-  else if ((plugin = bitu_plugin_ctx_find (plugin_ctx, cmd)) == NULL)
-    {
-      message = malloc (msgbufsize);
-      snprintf (message, msgbufsize, "Plugin `%s' not found", cmd);
-    }
   else
     {
-      /* Validating number of parameters */
-      if (bitu_plugin_num_params (plugin) != len)
-        {
-          message = malloc (msgbufsize);
-          snprintf (message, msgbufsize,
-                    "Wrong number of parameters. `%s' "
-                    "receives %d but %d were passed", cmd,
-                    bitu_plugin_num_params (plugin),
-                    len);
-        }
+      if (cmd[0] == '/')
+        _execute_command (server, cmd, params, len, &message);
       else
-        message = bitu_plugin_execute (plugin, params);
+        _execute_plugin (server, cmd, params, len, &message);
     }
 
   /* Feeding the user back */
@@ -422,6 +458,14 @@ main (int argc, char **argv)
   free (passwd);
   free (host);
 
+  /* main application logger */
+  app->logger = ta_log_new ("bitu-main");
+
+  /* Initializing the local server that will handle configuration
+   * interaction. */
+  server = bitu_server_new (sock_path, app);
+  free (sock_path);
+
   ta_xmpp_client_event_connect (app->xmpp, "connected",
                                 (ta_xmpp_client_hook_t) connected_cb,
                                 NULL);
@@ -433,18 +477,10 @@ main (int argc, char **argv)
                                 NULL);
   ta_xmpp_client_event_connect (app->xmpp, "message-received",
                                 (ta_xmpp_client_hook_t) message_received_cb,
-                                app->plugin_ctx);
+                                server);
   ta_xmpp_client_event_connect (app->xmpp, "presence-noticed",
                                 (ta_xmpp_client_hook_t) presence_noticed_cb,
                                 app->plugin_ctx);
-
-  /* main application logger */
-  app->logger = ta_log_new ("bitu-main");
-
-  /* Initializing the local server that will handle configuration
-   * interaction. */
-  server = bitu_server_new (sock_path, app);
-  free (sock_path);
 
   /* Running all commands found in the config file. */
   for (tmp = commands; tmp; tmp = tmp->next)

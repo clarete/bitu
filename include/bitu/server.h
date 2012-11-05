@@ -26,6 +26,7 @@ typedef struct _bitu_server bitu_server_t;
 
 bitu_server_t *bitu_server_new (const char *sock_path, bitu_app_t *app);
 void bitu_server_free (bitu_server_t *server);
+bitu_app_t *bitu_server_get_app (bitu_server_t *server);
 int bitu_server_connect (bitu_server_t *server);
 char *bitu_server_exec_cmd_line (bitu_server_t *server,
                                  const char *cmdline);

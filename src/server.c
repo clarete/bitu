@@ -521,6 +521,12 @@ bitu_server_free (bitu_server_t *server)
   free (server);
 }
 
+bitu_app_t *
+bitu_server_get_app (bitu_server_t *server)
+{
+  return server->app;
+}
+
 int
 bitu_server_connect (bitu_server_t *server)
 {

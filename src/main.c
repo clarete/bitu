@@ -273,6 +273,8 @@ main (int argc, char **argv)
     { 0, 0, 0, 0 }
   };
 
+  ta_global_state_setup ();
+
   while ((c = getopt_long (argc, argv, "j:p:H:P:c:dhvi:",
                            long_options, NULL)) != -1)
     {
@@ -501,6 +503,8 @@ main (int argc, char **argv)
       unlink (pid_file);
       free (pid_file);
     }
+
+  ta_global_state_teardown ();
 
   return 0;
 }

@@ -196,6 +196,7 @@ cmd_send (bitu_server_t *server, char **params, int num_params)
   const char *jid, *msg;
   iks *xmpp_msg;
   char *error;
+  char *result = NULL;
 
   if ((error = _validate_num_params ("send", 2, num_params)) != NULL)
     return error;
@@ -204,9 +205,10 @@ cmd_send (bitu_server_t *server, char **params, int num_params)
   msg = params[1];
 
   xmpp_msg = iks_make_msg (IKS_TYPE_CHAT, jid, msg);
-  ta_xmpp_client_send (server->app->xmpp, xmpp_msg);
+  if (ta_xmpp_client_send (server->app->xmpp, xmpp_msg) != IKS_OK)
+    result = strdup ("Message not sent");
   iks_delete (xmpp_msg);
-  return NULL;
+  return result;
 }
 
 static char *

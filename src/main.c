@@ -84,7 +84,7 @@ auth_failed_cb (ta_xmpp_client_t *client, void *data)
 static int
 message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 {
-  char *rawmsg, *rawbody, *cmd = NULL, *message = NULL;
+  char *rawbody, *cmd = NULL, *message = NULL;
   char **params = NULL;
   int i, len;
   iks *answer;
@@ -97,8 +97,7 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
   rawbody = iks_find_cdata (pak->x, "body");
   if (rawbody == NULL)
     return 0;
-  rawmsg = strdup (rawbody);
-  if (!bitu_util_extract_params (rawmsg, &cmd, &params, &len))
+  if (!bitu_util_extract_params (rawbody, &cmd, &params, &len))
     {
       message = malloc (msgbufsize);
       snprintf (message, msgbufsize, "The message seems to be empty");
@@ -124,7 +123,7 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
         message = bitu_plugin_execute (plugin, params);
     }
 
-  /* Feeding back the user */
+  /* Feeding the user back */
   answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message);
   ta_xmpp_client_send (client, answer);
 

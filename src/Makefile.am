@@ -1,6 +1,7 @@
 lib_LTLIBRARIES = libbitu.la
 libbitu_la_SOURCES = util.c loader.c server.c hashtable.c hashtable.h	\
-	hashtable-utils.c hashtable-utils.h conf.c
+	hashtable-utils.c hashtable-utils.h conf.c transport.c		\
+	transport-xmpp.c
 libbitu_la_CFLAGS = $(TANINGIA_CFLAGS) $(IKSEMEL_CFLAGS) -I$(top_srcdir)/include
 libbitu_la_LIBADD = $(TANINGIA_LIBS) $(IKSEMEL_LIBS) -ldl
 

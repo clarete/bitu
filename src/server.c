@@ -382,8 +382,9 @@ cmd_set_log_level (bitu_server_t *server, char **params, int nparams)
   logger = server->app->logger;
   ta_log_set_level (logger, level);
 
-  logger = ta_xmpp_client_get_logger (server->app->xmpp);
-  ta_log_set_level (logger, level);
+  /* TODO: wtf should I do here? */
+  /* logger = ta_xmpp_client_get_logger (server->app->xmpp); */
+  /* ta_log_set_level (logger, level); */
 
   return NULL;
 }
@@ -404,8 +405,9 @@ cmd_set_log_use_colors (bitu_server_t *server, char **params, int nparams)
   logger = server->app->logger;
   ta_log_set_use_colors (logger, val);
 
-  logger = ta_xmpp_client_get_logger (server->app->xmpp);
-  ta_log_set_use_colors (logger, val);
+  /* TODO: wtf should I do here? */
+  /* logger = ta_xmpp_client_get_logger (server->app->xmpp); */
+  /* ta_log_set_use_colors (logger, val); */
 
   return NULL;
 }
@@ -640,6 +642,41 @@ bitu_server_exec_cmd_line (bitu_server_t *server, const char *cmdline)
     }
   return answer;
 }
+
+char *
+bitu_server_exec_plugin (bitu_server_t *server, const char *plugin_name,
+                         char **params, int nparams, int *answer_size)
+{
+  bitu_plugin_ctx_t *plugin_ctx;
+  bitu_plugin_t *plugin;
+  int msgbufsize = 128;
+  char *message = NULL;
+
+  plugin_ctx = server->app->plugin_ctx;
+
+  if ((plugin = bitu_plugin_ctx_find (plugin_ctx, plugin_name)) == NULL)
+    {
+      message = malloc (msgbufsize);
+      snprintf (message, msgbufsize, "Plugin `%s' not found", plugin_name);
+    }
+  else
+    {
+      /* Validating number of parameters */
+      if (bitu_plugin_num_params (plugin) != nparams)
+        {
+          message = malloc (msgbufsize);
+          snprintf (message, msgbufsize,
+                    "Wrong number of parameters. `%s' "
+                    "receives %d but %d were passed", plugin_name,
+                    bitu_plugin_num_params (plugin),
+                    nparams);
+        }
+      else
+        message = bitu_plugin_execute (plugin, params);
+    }
+  return message;
+}
+
 
 int
 bitu_server_recv (bitu_server_t *server, int sock,

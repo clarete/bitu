@@ -296,20 +296,21 @@ main (int argc, char **argv)
         }
 
       /* Connecting */
-      if (!bitu_transport_connect (transport))
-        {
-          const ta_error_t *error = ta_error_last ();
-          ta_log_warn (app->logger, error->message);
-        }
-      else
+      if (bitu_transport_connect (transport) == TA_OK)
         {
           /* Running client */
-          if (!bitu_transport_run (transport))
+          if (bitu_transport_run (transport) != TA_OK)
             {
               const ta_error_t *error = ta_error_last ();
               if (error)
                 ta_log_warn (app->logger, error->message);
             }
+        }
+      else
+        {
+          const ta_error_t *error = ta_error_last ();
+          if (error)
+            ta_log_warn (app->logger, error->message);
         }
     }
 

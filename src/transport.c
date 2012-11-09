@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <bitu/util.h>
 #include <bitu/transport.h>
 #include <bitu/errors.h>
 #include <taningia/taningia.h>
@@ -46,8 +47,8 @@ bitu_transport_new (bitu_server_t *server, const char *uri)
    * now */
   if (strcmp (scheme, "xmpp") == 0)
     result = _bitu_xmpp_transport (server, uri_obj);
-  /* else if (strcmp (scheme, "irc") == 0) */
-  /*   result = _bitu_irc_transport (uri_obj); */
+  else if (strcmp (scheme, "irc") == 0)
+    result = _bitu_irc_transport (server, uri_obj);
   else
     {
       ta_error_set (BITU_ERROR_TRANSPORT_NOT_SUPPORTED,
@@ -68,5 +69,6 @@ bitu_transport_connect (bitu_transport_t *transport)
 int
 bitu_transport_run (bitu_transport_t *transport)
 {
-  return transport->run (transport);
+  bitu_util_start_new_thread ((bitu_util_callback_t) transport->run, transport);
+  return TA_OK;
 }

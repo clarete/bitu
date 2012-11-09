@@ -6,8 +6,8 @@
 # This is the only part that you'll not be able to reconfigure while
 # the bot is running. You'll obviously need to restart it if you
 # change something in this section.
-jid server@localhost
-password server
+transport "xmpp://lincoln:<password>@comum.org"
+transport "irc://yipitbuddy@irc.freenode.net/##bleh"
 server-sock-path /tmp/bitu.sock
 pid-file /tmp/bitu.pid
 

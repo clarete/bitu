@@ -40,5 +40,6 @@ int bitu_transport_run (bitu_transport_t *transport);
 
 /* Forward declarations for transports */
 extern bitu_transport_t *_bitu_xmpp_transport (bitu_server_t *server, ta_iri_t *uri);
+extern bitu_transport_t *_bitu_irc_transport (bitu_server_t *server, ta_iri_t *uri);
 
 #endif  /* BITU_TRANSPORT_H_ */

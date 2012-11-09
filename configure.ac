@@ -20,6 +20,10 @@ AC_PROG_RANLIB
 # Checks for libraries.
 AC_CHECK_LIB([readline], [readline])
 AC_CHECK_LIB([dl], [dlopen])
+AC_CHECK_LIB([ircclient], [irc_connect], [
+        AC_SUBST([LIBIRCCLIENT_CFLAGS])
+        AC_SUBST([LIBIRCCLIENT_LIBS], [-lircclient])
+])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h fcntl.h sys/socket.h])

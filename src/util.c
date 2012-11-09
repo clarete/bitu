@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <pthread.h>
 #include <bitu/util.h>
 
 char *
@@ -142,4 +143,12 @@ bitu_util_extract_params (const char *line, char **cmd,
 
   free (line_tmp);
   return 1;
+}
+
+void
+bitu_util_start_new_thread (bitu_util_callback_t callback, void *data)
+{
+  pthread_t thread;
+  pthread_create (&thread, NULL, callback, data);
+  pthread_detach (thread);
 }

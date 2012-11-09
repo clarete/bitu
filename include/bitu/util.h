@@ -19,8 +19,11 @@
 #ifndef BITU_UTIL_H_
 #define BITU_UTIL_H_ 1
 
+typedef void *(*bitu_util_callback_t) (void *);
+
 char * bitu_util_strstrip (char *string);
 int bitu_util_extract_params (const char *line, char **cmd,
                               char ***params, int *len);
+void bitu_util_start_new_thread (bitu_util_callback_t callback, void *data);
 
 #endif /* BITU_UTIL_H_ */

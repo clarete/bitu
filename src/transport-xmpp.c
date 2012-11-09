@@ -227,7 +227,7 @@ static int
 _xmpp_run (bitu_transport_t *transport)
 {
   ta_xmpp_client_t *client = (ta_xmpp_client_t *) transport->data;
-  return ta_xmpp_client_run (client, 1);
+  return ta_xmpp_client_run (client, 0);
 }
 
 bitu_transport_t *

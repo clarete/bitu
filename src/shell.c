@@ -174,7 +174,7 @@ usage (const char *prname)
 int
 main (int argc, char **argv)
 {
-  unsigned int s;
+  int s;
   struct sockaddr_un remote;
   socklen_t len;
   char *socket_path = NULL;

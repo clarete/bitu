@@ -44,7 +44,7 @@ struct _bitu_server
 {
   char *sock_path;
   bitu_app_t *app;
-  unsigned int sock;
+  int sock;
   hashtable_t *commands;
   hashtable_t *env;
   int can_run;
@@ -728,7 +728,9 @@ int
 bitu_server_send (bitu_server_t *server, int sock,
                   char *buf, size_t bufsize)
 {
-  int n, sent = 0;
+  int n;
+  size_t sent = 0;
+
   while (sent < bufsize)
     {
       n = send (sock, buf, bufsize, 0);
@@ -749,7 +751,7 @@ bitu_server_send (bitu_server_t *server, int sock,
 void
 bitu_server_run (bitu_server_t *server)
 {
-  unsigned int sock;
+  int sock;
   struct sockaddr_un remote;
 
   while (server->can_run)

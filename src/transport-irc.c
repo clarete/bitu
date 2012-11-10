@@ -33,7 +33,7 @@ void _irc_event_notice (irc_session_t *session,
                         unsigned int count)
 {
   char buf[512];
-  int cnt;
+  unsigned int cnt;
 
   buf[0] = '\0';
 

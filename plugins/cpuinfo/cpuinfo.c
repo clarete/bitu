@@ -43,8 +43,7 @@ cpuinfo_read_cpuinfo (int *num)
   cpuinfo_t **cpuinfos;
   int counter = 0;
 
-  fd = fopen ("/proc/cpuinfo", "r");
-  if (fd == NULL)
+  if ((fd = fopen ("/proc/cpuinfo", "r")) == NULL)
     return NULL;
 
   cpuinfos = malloc (sizeof (cpuinfo_t));
@@ -119,7 +118,13 @@ plugin_execute (void)
   cpuinfo_t **processors;
   int total_size = 0;
 
-  processors = cpuinfo_read_cpuinfo (&num_procs);
+#if __APPLE__
+  return strdup ("Hey kid, I'm running on a Mac OS X, there's no /proc/cpuinfo here");
+#endif
+
+  if ((processors = cpuinfo_read_cpuinfo (&num_procs)) == NULL)
+    return NULL;
+
   for (i = 0; i < num_procs; i++)
     {
       char *np, *proc;

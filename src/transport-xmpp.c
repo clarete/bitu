@@ -89,6 +89,10 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
         message = bitu_server_exec_plugin (server, cmd, params, len, NULL);
     }
 
+  /* No answer was returned */
+  if (message == NULL)
+    message = strdup ("The plugin returned nothing");
+
   /* Feeding the user back */
   answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message);
   ta_xmpp_client_send (client, answer);
@@ -100,7 +104,8 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 
   /* Freeing all other stuff */
   iks_delete (answer);
-  free (message);
+  if (message)
+    free (message);
   if (cmd)
     free (cmd);
   return 0;

@@ -165,12 +165,14 @@ _xmpp_connect (bitu_transport_t *transport)
     *host = NULL,
     *server = NULL,
     *password = NULL,
+    *resource = NULL,
     *jid = NULL;
 
   /* Getting data from the uri and parsing the username to get the
    * password after ':'. */
   user = (char *) ta_iri_get_user (transport->uri);
   host = (char *) ta_iri_get_host (transport->uri);
+  resource = (char *) ta_iri_get_path (transport->uri);
   password = strchr (user, ':') + 1;
   user = strndup (user, password - user - 1);
   port = ta_iri_get_port (transport->uri);
@@ -195,9 +197,11 @@ _xmpp_connect (bitu_transport_t *transport)
     }
 
   /* Building the JID again, but now only with user and host. */
-  jid_len = strlen (user) + strlen (host) + 2;
+  if (resource == NULL)
+    resource = "/bitU";
+  jid_len = strlen (user) + strlen (host) + strlen (resource) + 2;
   jid = malloc (jid_len * sizeof (char));
-  snprintf (jid, jid_len, "%s@%s", user, host);
+  snprintf (jid, jid_len, "%s@%s%s", user, host, resource);
   free (user);
 
   /* Configuring xmpp client */

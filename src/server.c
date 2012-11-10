@@ -295,6 +295,8 @@ cmd_list (bitu_server_t *server, char **params, int num_params)
       /* Removing the last \n. It is not needed in the end of the string */
       ret[full_size-1] = '\0';
     }
+  else
+    ret = strdup ("Possible values are `commands' or `plugins'");
   return ret;
 }
 

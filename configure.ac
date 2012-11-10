@@ -15,7 +15,6 @@ AM_SILENT_RULES([yes])
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_LIBTOOL
-AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_CHECK_LIB([readline], [readline])

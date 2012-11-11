@@ -23,7 +23,6 @@
 #include <taningia/taningia.h>
 #include <bitu/util.h>
 #include <bitu/errors.h>
-#include <bitu/server.h>
 #include <bitu/transport.h>
 
 /* XMPP client callbacks */
@@ -54,62 +53,62 @@ auth_failed_cb (ta_xmpp_client_t *client, void *data)
   return 0;
 }
 
-static int
-message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
-{
-  char *rawbody, *cmd = NULL, *message = NULL;
-  char **params = NULL;
-  int i, len;
-  iks *answer;
-  bitu_server_t *server;
+/* static int */
+/* message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data) */
+/* { */
+/*   char *rawbody, *cmd = NULL, *message = NULL; */
+/*   char **params = NULL; */
+/*   int i, len; */
+/*   iks *answer; */
+/*   bitu_server_t *server; */
 
-  server = (bitu_server_t *) data;
-  if (server == NULL)
-    return 0;
+/*   server = (bitu_server_t *) data; */
+/*   if (server == NULL) */
+/*     return 0; */
 
-  rawbody = iks_find_cdata (pak->x, "body");
-  if (rawbody == NULL)
-    return 0;
+/*   rawbody = iks_find_cdata (pak->x, "body"); */
+/*   if (rawbody == NULL) */
+/*     return 0; */
 
-  if (!bitu_util_extract_params (rawbody, &cmd, &params, &len))
-    {
-      int msgbufsize = 128;
-      message = malloc (msgbufsize);
-      snprintf (message, msgbufsize, "The message seems to be empty");
-    }
-  else
-    {
-      if (cmd[0] == '/')
-        {
-          char *c = cmd;
-          /* skipping the '/' char */
-          message = bitu_server_exec_cmd (server, &(*++c), params, len, NULL);
-        }
-      else
-        message = bitu_server_exec_plugin (server, cmd, params, len, NULL);
-    }
+/*   if (!bitu_util_extract_params (rawbody, &cmd, &params, &len)) */
+/*     { */
+/*       int msgbufsize = 128; */
+/*       message = malloc (msgbufsize); */
+/*       snprintf (message, msgbufsize, "The message seems to be empty"); */
+/*     } */
+/*   else */
+/*     { */
+/*       if (cmd[0] == '/') */
+/*         { */
+/*           char *c = cmd; */
+/*           /\* skipping the '/' char *\/ */
+/*           message = bitu_server_exec_cmd (server, &(*++c), params, len, NULL); */
+/*         } */
+/*       else */
+/*         message = bitu_server_exec_plugin (server, cmd, params, len, NULL); */
+/*     } */
 
-  /* No answer was returned */
-  if (message == NULL)
-    message = strdup ("The plugin returned nothing");
+/*   /\* No answer was returned *\/ */
+/*   if (message == NULL) */
+/*     message = strdup ("The plugin returned nothing"); */
 
-  /* Feeding the user back */
-  answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message);
-  ta_xmpp_client_send (client, answer);
+/*   /\* Feeding the user back *\/ */
+/*   answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message); */
+/*   ta_xmpp_client_send (client, answer); */
 
-  /* Freeing all parameters collected */
-  for (i = 0; i < len; i++)
-    free (params[i]);
-  free (params);
+/*   /\* Freeing all parameters collected *\/ */
+/*   for (i = 0; i < len; i++) */
+/*     free (params[i]); */
+/*   free (params); */
 
-  /* Freeing all other stuff */
-  iks_delete (answer);
-  if (message)
-    free (message);
-  if (cmd)
-    free (cmd);
-  return 0;
-}
+/*   /\* Freeing all other stuff *\/ */
+/*   iks_delete (answer); */
+/*   if (message) */
+/*     free (message); */
+/*   if (cmd) */
+/*     free (cmd); */
+/*   return 0; */
+/* } */
 
 static int
 presence_noticed_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
@@ -221,9 +220,9 @@ _xmpp_connect (bitu_transport_t *transport)
   ta_xmpp_client_event_connect (client, "authentication-failed",
                                 (ta_xmpp_client_hook_t) auth_failed_cb,
                                 NULL);
-  ta_xmpp_client_event_connect (client, "message-received",
-                                (ta_xmpp_client_hook_t) message_received_cb,
-                                transport->server);
+  /* ta_xmpp_client_event_connect (client, "message-received", */
+  /*                               (ta_xmpp_client_hook_t) message_received_cb, */
+  /*                               NULL); */
   ta_xmpp_client_event_connect (client, "presence-noticed",
                                 (ta_xmpp_client_hook_t) presence_noticed_cb,
                                 NULL);
@@ -240,11 +239,10 @@ _xmpp_run (bitu_transport_t *transport)
 }
 
 bitu_transport_t *
-_bitu_xmpp_transport (bitu_server_t *server, ta_iri_t *uri)
+_bitu_xmpp_transport (ta_iri_t *uri)
 {
   bitu_transport_t *transport;
   transport = malloc (sizeof (bitu_transport_t));
-  transport->server = server;
   transport->uri = uri;
   transport->connect = _xmpp_connect;
   transport->run = _xmpp_run;

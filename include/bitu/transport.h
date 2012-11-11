@@ -20,26 +20,46 @@
 #define BITU_TRANSPORT_H_ 1
 
 #include <taningia/taningia.h>
-#include <bitu/server.h>
 
+typedef struct bitu_conn_manager bitu_conn_manager_t;
 typedef struct bitu_transport bitu_transport_t;
 struct bitu_transport
 {
   ta_iri_t *uri;
-  bitu_server_t *server;
   void *data;
   const char *(*protocol) (void);
   int (*connect) (bitu_transport_t *transport);
   int (*run) (bitu_transport_t *transport);
 };
 
+typedef enum
+{
+  BITU_CONN_STATUS_OK,
+  BITU_CONN_STATUS_ERROR,
+  BITU_CONN_STATUS_TRANSPORT_NOT_FOUND,
+  BITU_CONN_STATUS_CONNECTION_FAILED,
+  BITU_CONN_STATUS_ALREADY_RUNNING,
+  BITU_CONN_STATUS_RUNNING_FAILED
+} bitu_conn_status_t;
 
-bitu_transport_t *bitu_transport_new (bitu_server_t *server, const char *uri);
+
+/* Transport api */
+bitu_transport_t *bitu_transport_new (const char *uri);
 int bitu_transport_connect (bitu_transport_t *transport);
 int bitu_transport_run (bitu_transport_t *transport);
 
+
+/* Transport manager API */
+bitu_conn_manager_t *bitu_conn_manager_new (void);
+bitu_transport_t *bitu_conn_manager_add (bitu_conn_manager_t *manager, const char *uri);
+void bitu_conn_manager_remove (bitu_conn_manager_t *manager, const char *uri);
+int bitu_conn_manager_get_n_transports (bitu_conn_manager_t *manager);
+ta_list_t *bitu_conn_manager_get_transports (bitu_conn_manager_t *manager);
+bitu_transport_t *bitu_conn_manager_get_transport (bitu_conn_manager_t *manager, const char *uri);
+bitu_conn_status_t bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri);
+
 /* Forward declarations for transports */
-extern bitu_transport_t *_bitu_xmpp_transport (bitu_server_t *server, ta_iri_t *uri);
-extern bitu_transport_t *_bitu_irc_transport (bitu_server_t *server, ta_iri_t *uri);
+extern bitu_transport_t *_bitu_xmpp_transport (ta_iri_t *uri);
+extern bitu_transport_t *_bitu_irc_transport (ta_iri_t *uri);
 
 #endif  /* BITU_TRANSPORT_H_ */

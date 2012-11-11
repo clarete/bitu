@@ -125,12 +125,11 @@ _irc_run (bitu_transport_t *transport)
 }
 
 bitu_transport_t *
-_bitu_irc_transport (bitu_server_t *server, ta_iri_t *uri)
+_bitu_irc_transport (ta_iri_t *uri)
 {
   irc_session_t *session;
   bitu_transport_t *transport;
   transport = malloc (sizeof (bitu_transport_t));
-  transport->server = server;
   transport->uri = uri;
   transport->connect = _irc_connect;
   transport->run = _irc_run;

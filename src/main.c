@@ -111,9 +111,9 @@ main (int argc, char **argv)
 {
   bitu_app_t *app;
   bitu_server_t *server;
-  ta_list_t *conf;
+  ta_list_t *conf = NULL, *transports = NULL;
   ta_list_t *commands = NULL, *tmp = NULL;
-  ta_list_t *transports = NULL;
+  bitu_conn_manager_t *connections = NULL;
   char *config_file = NULL, *sock_path = NULL;
   char *pid_file = NULL;
   int daemonize = 0;
@@ -131,13 +131,15 @@ main (int argc, char **argv)
 
   ta_global_state_setup ();
 
+  connections = bitu_conn_manager_new ();
+
   while ((c = getopt_long (argc, argv, "t:c:dhvi:",
                            long_options, NULL)) != -1)
     {
       switch (c)
         {
         case 't':
-          transports = ta_list_append (transports, strdup (optarg));
+          bitu_conn_manager_add (connections, optarg);
           break;
 
         case 's':
@@ -204,7 +206,7 @@ main (int argc, char **argv)
           bitu_conf_entry_t *entry;
           entry = tmp->data;
           if (strcmp (entry->cmd, "transport") == 0)
-            transports = ta_list_append (transports, entry->params[0]);
+            bitu_conn_manager_add (connections, entry->params[0]);
           else if (strcmp (entry->cmd, "server-sock-path") == 0)
             sock_path = entry->params[0];
           else if (strcmp (entry->cmd, "pid-file") == 0 && pid_file == NULL)
@@ -217,7 +219,7 @@ main (int argc, char **argv)
     }
 
   /* Some param validation */
-  if (transports == NULL)
+  if (bitu_conn_manager_get_n_transports (connections) == 0)
     {
       usage (argv[0]);
       ta_list_free (commands);
@@ -237,6 +239,9 @@ main (int argc, char **argv)
   app->logfile = NULL;
   app->logfd = -1;
   app->logflags = 0;
+
+  /* List of connections */
+  app->connections = connections;
 
   /* Preparing the plugin context */
   app->plugin_ctx = bitu_plugin_ctx_new ();
@@ -283,36 +288,11 @@ main (int argc, char **argv)
 
   /* Walking through all the transports found and trying to connect and
    * run them. */
+  transports = bitu_conn_manager_get_transports (connections);
   for (tmp = transports; tmp; tmp = tmp->next)
-    {
-      bitu_transport_t *transport;
-
-      if ((transport = bitu_transport_new (server, tmp->data)) == NULL)
-        {
-          const ta_error_t *error = ta_error_last ();
-          ta_log_warn (app->logger, "Transport not initialized: %s: %s",
-                       tmp->data, error->message);
-          continue;
-        }
-
-      /* Connecting */
-      if (bitu_transport_connect (transport) == TA_OK)
-        {
-          /* Running client */
-          if (bitu_transport_run (transport) != TA_OK)
-            {
-              const ta_error_t *error = ta_error_last ();
-              if (error)
-                ta_log_warn (app->logger, error->message);
-            }
-        }
-      else
-        {
-          const ta_error_t *error = ta_error_last ();
-          if (error)
-            ta_log_warn (app->logger, error->message);
-        }
-    }
+    if ((bitu_conn_manager_run (connections, tmp->data)) != BITU_CONN_STATUS_OK)
+      ta_log_warn (app->logger, "Transport `%s' not initialized", tmp->data);
+  ta_list_free (transports);
 
   /* Connecting our local management server */
   if (bitu_server_connect (server) == TA_OK)

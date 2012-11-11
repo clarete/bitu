@@ -21,11 +21,13 @@
 
 #include <taningia/taningia.h>
 #include <bitu/loader.h>
+#include <bitu/transport.h>
 
 typedef struct {
   ta_log_t *logger;
   ta_xmpp_client_t *xmpp;
   bitu_plugin_ctx_t *plugin_ctx;
+  bitu_conn_manager_t *connections;
   char *logfile;
   int logfd;
   int logflags;

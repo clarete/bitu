@@ -53,62 +53,74 @@ auth_failed_cb (ta_xmpp_client_t *client, void *data)
   return 0;
 }
 
-/* static int */
-/* message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data) */
-/* { */
-/*   char *rawbody, *cmd = NULL, *message = NULL; */
-/*   char **params = NULL; */
-/*   int i, len; */
-/*   iks *answer; */
-/*   bitu_server_t *server; */
+static int
+message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
+{
+  char *rawbody = NULL;
+  bitu_transport_t *transport = (bitu_transport_t *) data;
+  bitu_command_t *command = NULL;
 
-/*   server = (bitu_server_t *) data; */
-/*   if (server == NULL) */
-/*     return 0; */
+  rawbody = iks_find_cdata (pak->x, "body");
+  if (rawbody == NULL)
+    return 0;
 
-/*   rawbody = iks_find_cdata (pak->x, "body"); */
-/*   if (rawbody == NULL) */
-/*     return 0; */
+  command = bitu_command_new (transport, rawbody);
+  bitu_transport_queue_command (transport, command);
 
-/*   if (!bitu_util_extract_params (rawbody, &cmd, &params, &len)) */
-/*     { */
-/*       int msgbufsize = 128; */
-/*       message = malloc (msgbufsize); */
-/*       snprintf (message, msgbufsize, "The message seems to be empty"); */
-/*     } */
-/*   else */
-/*     { */
-/*       if (cmd[0] == '/') */
-/*         { */
-/*           char *c = cmd; */
-/*           /\* skipping the '/' char *\/ */
-/*           message = bitu_server_exec_cmd (server, &(*++c), params, len, NULL); */
-/*         } */
-/*       else */
-/*         message = bitu_server_exec_plugin (server, cmd, params, len, NULL); */
-/*     } */
 
-/*   /\* No answer was returned *\/ */
-/*   if (message == NULL) */
-/*     message = strdup ("The plugin returned nothing"); */
+  /* char *rawbody, *cmd = NULL, *message = NULL; */
+  /* char **params = NULL; */
+  /* int i, len; */
+  /* iks *answer; */
+  /* bitu_server_t *server; */
 
-/*   /\* Feeding the user back *\/ */
-/*   answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message); */
-/*   ta_xmpp_client_send (client, answer); */
+  /* server = (bitu_server_t *) data; */
+  /* if (server == NULL) */
+  /*   return 0; */
 
-/*   /\* Freeing all parameters collected *\/ */
-/*   for (i = 0; i < len; i++) */
-/*     free (params[i]); */
-/*   free (params); */
+  /* rawbody = iks_find_cdata (pak->x, "body"); */
+  /* if (rawbody == NULL) */
+  /*   return 0; */
 
-/*   /\* Freeing all other stuff *\/ */
-/*   iks_delete (answer); */
-/*   if (message) */
-/*     free (message); */
-/*   if (cmd) */
-/*     free (cmd); */
-/*   return 0; */
-/* } */
+  /* if (!bitu_util_extract_params (rawbody, &cmd, &params, &len)) */
+  /*   { */
+  /*     int msgbufsize = 128; */
+  /*     message = malloc (msgbufsize); */
+  /*     snprintf (message, msgbufsize, "The message seems to be empty"); */
+  /*   } */
+  /* else */
+  /*   { */
+  /*     if (cmd[0] == '/') */
+  /*       { */
+  /*         char *c = cmd; */
+  /*         /\* skipping the '/' char *\/ */
+  /*         message = bitu_server_exec_cmd (server, &(*++c), params, len, NULL); */
+  /*       } */
+  /*     else */
+  /*       message = bitu_server_exec_plugin (server, cmd, params, len, NULL); */
+  /*   } */
+
+  /* /\* No answer was returned *\/ */
+  /* if (message == NULL) */
+  /*   message = strdup ("The plugin returned nothing"); */
+
+  /* /\* Feeding the user back *\/ */
+  /* answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message); */
+  /* ta_xmpp_client_send (client, answer); */
+
+  /* /\* Freeing all parameters collected *\/ */
+  /* for (i = 0; i < len; i++) */
+  /*   free (params[i]); */
+  /* free (params); */
+
+  /* /\* Freeing all other stuff *\/ */
+  /* iks_delete (answer); */
+  /* if (message) */
+  /*   free (message); */
+  /* if (cmd) */
+  /*   free (cmd); */
+  return 0;
+}
 
 static int
 presence_noticed_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
@@ -169,12 +181,12 @@ _xmpp_connect (bitu_transport_t *transport)
 
   /* Getting data from the uri and parsing the username to get the
    * password after ':'. */
-  user = (char *) ta_iri_get_user (transport->uri);
-  host = (char *) ta_iri_get_host (transport->uri);
-  resource = (char *) ta_iri_get_path (transport->uri);
+  user = (char *) ta_iri_get_user (bitu_transport_get_uri (transport));
+  host = (char *) ta_iri_get_host (bitu_transport_get_uri (transport));
+  resource = (char *) ta_iri_get_path (bitu_transport_get_uri (transport));
   password = strchr (user, ':') + 1;
   user = strndup (user, password - user - 1);
-  port = ta_iri_get_port (transport->uri);
+  port = ta_iri_get_port (bitu_transport_get_uri (transport));
 
   /* Performing a SRV query to get the host. I'm always calling the init
    * function to re-read all the config files everytime we try to
@@ -191,7 +203,7 @@ _xmpp_connect (bitu_transport_t *transport)
       ta_error_set (BITU_ERROR_TRANSPORT_INVALID_URL,
                     "Transport not initialized: %s: "
                     "XMPP transport uri must contain user, password and host",
-                    ta_iri_to_string (transport->uri));
+                    ta_iri_to_string (bitu_transport_get_uri (transport)));
       return TA_ERROR;
     }
 
@@ -208,7 +220,7 @@ _xmpp_connect (bitu_transport_t *transport)
   free (jid);
 
   /* Saving the client for further calls */
-  transport->data = client;
+  bitu_transport_set_data (transport, client);
 
   /* Connecting signals */
   ta_xmpp_client_event_connect (client, "connected",
@@ -220,9 +232,9 @@ _xmpp_connect (bitu_transport_t *transport)
   ta_xmpp_client_event_connect (client, "authentication-failed",
                                 (ta_xmpp_client_hook_t) auth_failed_cb,
                                 NULL);
-  /* ta_xmpp_client_event_connect (client, "message-received", */
-  /*                               (ta_xmpp_client_hook_t) message_received_cb, */
-  /*                               NULL); */
+  ta_xmpp_client_event_connect (client, "message-received",
+                                (ta_xmpp_client_hook_t) message_received_cb,
+                                transport);
   ta_xmpp_client_event_connect (client, "presence-noticed",
                                 (ta_xmpp_client_hook_t) presence_noticed_cb,
                                 NULL);
@@ -234,17 +246,15 @@ _xmpp_connect (bitu_transport_t *transport)
 static int
 _xmpp_run (bitu_transport_t *transport)
 {
-  ta_xmpp_client_t *client = (ta_xmpp_client_t *) transport->data;
+  ta_xmpp_client_t *client =
+    (ta_xmpp_client_t *) bitu_transport_get_data (transport);
   return ta_xmpp_client_run (client, 0);
 }
 
-bitu_transport_t *
-_bitu_xmpp_transport (ta_iri_t *uri)
+int
+_bitu_xmpp_transport (bitu_transport_t *transport)
 {
-  bitu_transport_t *transport;
-  transport = malloc (sizeof (bitu_transport_t));
-  transport->uri = uri;
-  transport->connect = _xmpp_connect;
-  transport->run = _xmpp_run;
-  return transport;
+  bitu_transport_set_callback_connect (transport, _xmpp_connect);
+  bitu_transport_set_callback_run (transport, _xmpp_run);
+  return TA_OK;
 }

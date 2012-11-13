@@ -106,6 +106,16 @@ _save_pid (bitu_app_t *app, const char *pid_file)
   close (pidfd);
 }
 
+
+static
+int _stuff (void *data)
+{
+  bitu_command_t *command = (bitu_command_t *) data;
+  fprintf (stderr, "Yay: %s\n", bitu_command_get_cmd (command));
+  return 0;
+}
+
+
 int
 main (int argc, char **argv)
 {
@@ -293,6 +303,7 @@ main (int argc, char **argv)
     if ((bitu_conn_manager_run (connections, tmp->data)) != BITU_CONN_STATUS_OK)
       ta_log_warn (app->logger, "Transport `%s' not initialized", tmp->data);
   ta_list_free (transports);
+  bitu_conn_manager_consume (connections, (bitu_queue_callback_consume_t) _stuff);
 
   /* Connecting our local management server */
   if (bitu_server_connect (server) == TA_OK)

@@ -24,6 +24,15 @@ AC_CHECK_LIB([ircclient], [irc_connect], [
         AC_SUBST([LIBIRCCLIENT_LIBS], [-lircclient])
 ])
 
+# Checking for pthread
+ACX_PTHREAD([
+        AC_SUBST([PTHREAD_CFLAGS])
+        AC_SUBST([PTHREAD_LIBS])
+        CC="$PTHREAD_CC"
+],[
+        AC_MSG_ERROR([Compiling without threads support])
+])
+
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h fcntl.h sys/socket.h])
 

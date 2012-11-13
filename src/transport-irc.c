@@ -78,7 +78,7 @@ _irc_get_session (bitu_transport_t *transport)
       return NULL;
     }
 
-  irc_set_ctx (session, (void *) ta_iri_get_fragment (transport->uri));
+  irc_set_ctx (session, (void *) ta_iri_get_fragment (bitu_transport_get_uri (transport)));
   return session;
 }
 
@@ -89,18 +89,19 @@ _irc_connect (bitu_transport_t *transport)
   int port;
   char *host, *nick;
 
-  host = (char *) ta_iri_get_host (transport->uri);
-  nick = (char *) ta_iri_get_user (transport->uri);
+  host = (char *) ta_iri_get_host (bitu_transport_get_uri (transport));
+  nick = (char *) ta_iri_get_user (bitu_transport_get_uri (transport));
   nick = nick ? nick : "bitU";
-  port = ta_iri_get_port (transport->uri);
+  port = ta_iri_get_port (bitu_transport_get_uri (transport));
   port = port ? port : IRC_PORT;
 
   printf ("Connecting...");
-  if (irc_connect (transport->data, host, port, NULL, nick, 0, 0) != 0)
+  if (irc_connect (bitu_transport_get_data (transport), host, port, NULL, nick, 0, 0) != 0)
     {
-      printf ("bosta: %s\n", irc_strerror (irc_errno (transport->data)));
+      printf ("bosta: %s\n",
+              irc_strerror (irc_errno (bitu_transport_get_data (transport))));
       ta_error_set (BITU_ERROR_TRANSPORT_IRC_CONN,
-                    irc_strerror (irc_errno (transport->data)));
+                    irc_strerror (irc_errno (bitu_transport_get_data (transport))));
       printf ("error\n");
       return TA_ERROR;
     }
@@ -112,11 +113,12 @@ static int
 _irc_run (bitu_transport_t *transport)
 {
   printf ("Running...\n");
-  if (irc_run (transport->data) != 0)
+  if (irc_run (bitu_transport_get_data (transport)) != 0)
     {
-      printf ("bosta: %s\n", irc_strerror (irc_errno (transport->data)));
+      printf ("bosta: %s\n",
+              irc_strerror (irc_errno (bitu_transport_get_data (transport))));
       ta_error_set (BITU_ERROR_TRANSPORT_IRC_RUN,
-                    irc_strerror (irc_errno (transport->data)));
+                    irc_strerror (irc_errno (bitu_transport_get_data (transport))));
       printf ("error\n");
       return TA_ERROR;
     }
@@ -124,21 +126,15 @@ _irc_run (bitu_transport_t *transport)
   return TA_OK;
 }
 
-bitu_transport_t *
-_bitu_irc_transport (ta_iri_t *uri)
+int
+_bitu_irc_transport (bitu_transport_t *transport)
 {
   irc_session_t *session;
-  bitu_transport_t *transport;
-  transport = malloc (sizeof (bitu_transport_t));
-  transport->uri = uri;
-  transport->connect = _irc_connect;
-  transport->run = _irc_run;
+  bitu_transport_set_callback_connect (transport, _irc_connect);
+  bitu_transport_set_callback_run (transport, _irc_run);
 
   if ((session = _irc_get_session (transport)) == NULL)
-    {
-      free (transport);
-      return NULL;
-    }
-  transport->data = session;
-  return transport;
+      return TA_ERROR;
+  bitu_transport_set_data (transport, session);
+  return TA_OK;
 }

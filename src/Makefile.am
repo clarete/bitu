@@ -4,9 +4,9 @@ libbitu_la_SOURCES = util.c loader.c server.c hashtable.c hashtable.h	\
 	transport-xmpp.c transport-irc.c
 
 libbitu_la_CFLAGS = $(TANINGIA_CFLAGS) $(LIBIRCCLIENT_CFLAGS)	\
-	$(IKSEMEL_CFLAGS) -I$(top_srcdir)/include
+	$(IKSEMEL_CFLAGS) $(PTHREAD_CFLAGS) -I$(top_srcdir)/include
 libbitu_la_LIBADD = $(TANINGIA_LIBS) $(LIBIRCCLIENT_LIBS)	\
-	$(IKSEMEL_LIBS) -ldl
+	$(IKSEMEL_LIBS) $(PTHREAD_LIBS) -ldl
 
 bin_PROGRAMS = bitu bituctl
 

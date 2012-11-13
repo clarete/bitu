@@ -21,16 +21,10 @@
 
 #include <taningia/taningia.h>
 
+typedef struct bitu_queue bitu_queue_t;
 typedef struct bitu_conn_manager bitu_conn_manager_t;
 typedef struct bitu_transport bitu_transport_t;
-struct bitu_transport
-{
-  ta_iri_t *uri;
-  void *data;
-  const char *(*protocol) (void);
-  int (*connect) (bitu_transport_t *transport);
-  int (*run) (bitu_transport_t *transport);
-};
+typedef struct bitu_command bitu_command_t;
 
 typedef enum
 {
@@ -43,10 +37,13 @@ typedef enum
 } bitu_conn_status_t;
 
 
-/* Transport api */
-bitu_transport_t *bitu_transport_new (const char *uri);
-int bitu_transport_connect (bitu_transport_t *transport);
-int bitu_transport_run (bitu_transport_t *transport);
+/* Queue api */
+typedef int (*bitu_queue_callback_consume_t) (void *data);
+
+bitu_queue_t *bitu_queue_new (void);
+void bitu_queue_free (bitu_queue_t *queue);
+void bitu_queue_add (bitu_queue_t *queue, void *data);
+void bitu_queue_consume (bitu_queue_t *queue, bitu_queue_callback_consume_t callback);
 
 
 /* Transport manager API */
@@ -57,9 +54,35 @@ int bitu_conn_manager_get_n_transports (bitu_conn_manager_t *manager);
 ta_list_t *bitu_conn_manager_get_transports (bitu_conn_manager_t *manager);
 bitu_transport_t *bitu_conn_manager_get_transport (bitu_conn_manager_t *manager, const char *uri);
 bitu_conn_status_t bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri);
+void bitu_conn_manager_consume (bitu_conn_manager_t *manager, bitu_queue_callback_consume_t callback);
+
+
+/* Transport api */
+typedef int (*bitu_transport_callback_connect_t) (bitu_transport_t *transport);
+typedef int (*bitu_transport_callback_run_t) (bitu_transport_t *transport);
+
+bitu_transport_t *bitu_transport_new (const char *uri);
+ta_iri_t *bitu_transport_get_uri (bitu_transport_t *transport);
+int bitu_transport_connect (bitu_transport_t *transport);
+int bitu_transport_run (bitu_transport_t *transport);
+void *bitu_transport_get_data (bitu_transport_t *transport);
+void bitu_transport_set_data (bitu_transport_t *transport, void *data);
+void bitu_transport_set_callback_connect (bitu_transport_t *transport,
+                                          bitu_transport_callback_connect_t callback);
+void bitu_transport_set_callback_run (bitu_transport_t *transport,
+                                      bitu_transport_callback_run_t callback);
+void bitu_transport_queue_command (bitu_transport_t *transport, bitu_command_t *cmd);
+
+
+/* Command api */
+bitu_command_t *bitu_command_new (bitu_transport_t *transport, const char *cmd);
+void bitu_command_free (bitu_command_t *command);
+bitu_transport_t *bitu_command_get_transport (bitu_command_t *command);
+const char *bitu_command_get_cmd (bitu_command_t *command);
+
 
 /* Forward declarations for transports */
-extern bitu_transport_t *_bitu_xmpp_transport (ta_iri_t *uri);
-extern bitu_transport_t *_bitu_irc_transport (ta_iri_t *uri);
+extern int _bitu_xmpp_transport (bitu_transport_t *transport);
+extern int _bitu_irc_transport (bitu_transport_t *transport);
 
 #endif  /* BITU_TRANSPORT_H_ */

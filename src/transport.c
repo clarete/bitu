@@ -18,7 +18,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 #include <taningia/taningia.h>
 #include <bitu/util.h>
 #include <bitu/errors.h>
@@ -28,9 +30,47 @@
 #include "hashtable-utils.h"
 
 
+#define COMMAND_QUEUE_SIZE 10
+
+
+struct bitu_queue
+{
+  ta_list_t *list;
+  int running;
+  int maxsize;
+  pthread_mutex_t *mutex;
+  pthread_cond_t *not_full;
+  pthread_cond_t *not_empty;
+};
+
+
 struct bitu_conn_manager
 {
   hashtable_t *transports;
+  bitu_queue_t *commands;
+};
+
+typedef struct {
+  bitu_queue_t *queue;
+  bitu_queue_callback_consume_t callback;
+} _bitu_consumer_params_t;
+
+
+struct bitu_transport
+{
+  bitu_queue_t *commands;
+  ta_iri_t *uri;
+  void *data;
+  const char *(*protocol) (void);
+  int (*connect) (bitu_transport_t *transport);
+  int (*run) (bitu_transport_t *transport);
+};
+
+
+struct bitu_command
+{
+  bitu_transport_t *transport;
+  char *cmd;
 };
 
 
@@ -46,6 +86,7 @@ bitu_conn_manager_t *
 bitu_conn_manager_new (void)
 {
   bitu_conn_manager_t *manager = malloc (sizeof (bitu_conn_manager_t));
+  manager->commands = bitu_queue_new ();
   manager->transports =
     hashtable_create (hash_string,
                       string_equal,
@@ -61,6 +102,11 @@ bitu_conn_manager_add (bitu_conn_manager_t *manager, const char *uri)
   bitu_transport_t *transport;
   if ((transport = bitu_transport_new (uri)) == NULL)
     return NULL;
+
+  /* All transports write to the same command queue */
+  transport->commands = manager->commands;
+
+  /* Saving the transport to the manager */
   hashtable_set (manager->transports, strdup (uri), transport);
   return transport;
 }
@@ -74,11 +120,13 @@ bitu_conn_manager_remove (bitu_conn_manager_t *manager, const char *uri)
   hashtable_del (manager->transports, uri);
 }
 
+
 int
 bitu_conn_manager_get_n_transports (bitu_conn_manager_t *manager)
 {
   return manager->transports->size;
 }
+
 
 ta_list_t *
 bitu_conn_manager_get_transports (bitu_conn_manager_t *manager)
@@ -121,13 +169,36 @@ bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri)
   return BITU_CONN_STATUS_CONNECTION_FAILED;
 }
 
+
+void *
+_do_bitu_conn_manager_consume (void *data)
+{
+  _bitu_consumer_params_t *params = (_bitu_consumer_params_t *) data;
+  printf ("Starting the consumer\n");
+  bitu_queue_consume (params->queue, params->callback);
+  free (params);
+  return NULL;
+}
+
+
+void
+bitu_conn_manager_consume (bitu_conn_manager_t *manager,
+                           bitu_queue_callback_consume_t callback)
+{
+  _bitu_consumer_params_t *params = malloc (sizeof (_bitu_consumer_params_t));
+  params->queue = manager->commands;
+  params->callback = callback;
+  bitu_util_start_new_thread (_do_bitu_conn_manager_consume, params);
+}
+
+
 /* The transport api */
 
 
 bitu_transport_t *
 bitu_transport_new (const char *uri)
 {
-  bitu_transport_t *result;
+  bitu_transport_t *transport;
   ta_iri_t *uri_obj;
   const char *scheme;
 
@@ -144,22 +215,75 @@ bitu_transport_new (const char *uri)
       return NULL;
     }
 
+  /* Allocating memory for the new transport */
+  transport = malloc (sizeof (bitu_transport_t));
+  transport->uri = uri_obj;
+
   /* Looking for the right transport. Possible values hardcoded by
    * now */
   if (strcmp (scheme, "xmpp") == 0)
-    result = _bitu_xmpp_transport (uri_obj);
-  else if (strcmp (scheme, "irc") == 0)
-    result = _bitu_irc_transport (uri_obj);
-  else
     {
-      ta_error_set (BITU_ERROR_TRANSPORT_NOT_SUPPORTED,
-                    "There is no transport to handle the protocol %s",
-                    scheme);
-      return NULL;
+      if (_bitu_xmpp_transport (transport) != TA_OK)
+        goto error;
     }
-  return result;
+  else if (strcmp (scheme, "irc") == 0)
+    {
+      if (_bitu_irc_transport (transport) != TA_OK)
+        goto error;
+    }
+  else
+    goto error;
+
+  return transport;
+
+ error:
+  ta_object_unref (uri_obj);
+  ta_error_set (BITU_ERROR_TRANSPORT_NOT_SUPPORTED,
+                "There is no transport to handle the protocol %s",
+                scheme);
+  free (transport);
+  return NULL;
 }
 
+
+void
+bitu_transport_queue_command (bitu_transport_t *transport, bitu_command_t *cmd)
+{
+  bitu_queue_add (transport->commands, cmd);
+}
+
+
+ta_iri_t *
+bitu_transport_get_uri (bitu_transport_t *transport)
+{
+  return transport->uri;
+}
+
+void *
+bitu_transport_get_data (bitu_transport_t *transport)
+{
+  return transport->data;
+}
+
+void
+bitu_transport_set_data (bitu_transport_t *transport, void *data)
+{
+  transport->data = data;
+}
+
+void
+bitu_transport_set_callback_connect (bitu_transport_t *transport,
+                                     bitu_transport_callback_connect_t callback)
+{
+  transport->connect = callback;
+}
+
+void
+bitu_transport_set_callback_run (bitu_transport_t *transport,
+                                 bitu_transport_callback_run_t callback)
+{
+  transport->run = callback;
+}
 
 int
 bitu_transport_connect (bitu_transport_t *transport)
@@ -173,4 +297,153 @@ bitu_transport_run (bitu_transport_t *transport)
 {
   bitu_util_start_new_thread ((bitu_util_callback_t) transport->run, transport);
   return TA_OK;
+}
+
+
+/* -- Command API -- */
+
+
+bitu_command_t *
+bitu_command_new (bitu_transport_t *transport, const char *cmd)
+{
+  bitu_command_t *command;
+  if ((command = malloc (sizeof (bitu_command_t))) == NULL)
+    return NULL;
+  command->transport = transport;
+  command->cmd = strdup (cmd);
+  return command;
+}
+
+
+void
+bitu_command_free (bitu_command_t *command)
+{
+  free (command->cmd);
+  free (command);
+}
+
+
+bitu_transport_t *
+bitu_command_get_transport (bitu_command_t *command)
+{
+  return command->transport;
+}
+
+const char *
+bitu_command_get_cmd (bitu_command_t *command)
+{
+  return (const char *) command->cmd;
+}
+
+
+/* -- Queue api -- */
+
+
+bitu_queue_t *
+bitu_queue_new (void)
+{
+  bitu_queue_t *queue;
+  if ((queue = malloc (sizeof (bitu_queue_t))) == NULL)
+    return NULL;
+
+  queue->maxsize = COMMAND_QUEUE_SIZE;
+  queue->running = 0;
+  queue->list = NULL;
+  queue->mutex = malloc (sizeof (pthread_mutex_t));
+  pthread_mutex_init (queue->mutex, NULL);
+  queue->not_full = malloc (sizeof (pthread_cond_t));
+  pthread_cond_init (queue->not_full, NULL);
+  queue->not_empty = malloc (sizeof (pthread_cond_t));
+  pthread_cond_init (queue->not_empty, NULL);
+
+  return queue;
+}
+
+
+void
+bitu_queue_free (bitu_queue_t *queue)
+{
+  pthread_mutex_destroy (queue->mutex);
+  free (queue->mutex);
+
+  pthread_cond_destroy (queue->not_full);
+  free (queue->not_full);
+
+  pthread_cond_destroy (queue->not_empty);
+  free (queue->not_empty);
+
+  free (queue);
+}
+
+
+void
+bitu_queue_add (bitu_queue_t *queue, void *data)
+{
+  fprintf (stderr, "queue::add() called\n");
+
+  /* Exclusive access */
+  pthread_mutex_lock (queue->mutex);
+  fprintf (stderr, "queue::add() locked the mutex\n");
+
+  /* The queue is full, let's wait until it has free slots to add new
+   * commands again */
+  while (ta_list_len (queue->list) >= queue->maxsize)
+    pthread_cond_wait (queue->not_full, queue->mutex);
+
+  /* Adding the new entry to our queue */
+  queue->list = ta_list_prepend (queue->list, data);
+
+  /* Unlocking the mutex and forwarding the signal saying that our list
+   * is not empty anymore */
+  fprintf (stderr, "queue::add() unlocked the mutex\n");
+  pthread_mutex_unlock (queue->mutex);
+  pthread_cond_signal (queue->not_empty);
+}
+
+
+static void *
+_bitu_queue_pop (bitu_queue_t *queue)
+{
+  void *data = NULL;
+  ta_list_t *popped_out = NULL;
+  queue->list = ta_list_pop (queue->list, &popped_out);
+
+  if (popped_out != NULL)
+    {
+      data = popped_out->data;
+      ta_list_free (popped_out);
+    }
+  return data;
+}
+
+
+void
+bitu_queue_consume (bitu_queue_t *queue, bitu_queue_callback_consume_t callback)
+{
+  void *data;
+
+  fprintf (stderr, "queue::consume() called\n");
+
+  queue->running = 1;
+
+  while (queue->running)
+    {
+      /* Exclusive access */
+      pthread_mutex_lock (queue->mutex);
+      fprintf (stderr, "queue::consume() locked the mutex\n");
+
+      /* The queue is full, let's wait until it has free slots to add new
+       * commands again */
+      while (ta_list_len (queue->list) == 0)
+        pthread_cond_wait (queue->not_empty, queue->mutex);
+
+      /* Popping the last element out of the list */
+      if ((data = _bitu_queue_pop (queue)) != NULL)
+        callback (data);
+
+      fprintf (stderr, "queue::consume() unlocked the mutex\n");
+      pthread_mutex_unlock (queue->mutex);
+      pthread_cond_signal (queue->not_full);
+      usleep (1000000);
+    }
 }

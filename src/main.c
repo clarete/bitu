@@ -108,10 +108,52 @@ _save_pid (bitu_app_t *app, const char *pid_file)
 
 
 static
-int _stuff (void *data)
+int _exec_command (void *data, void *extra_data)
 {
   bitu_command_t *command = (bitu_command_t *) data;
-  fprintf (stderr, "Yay: %s\n", bitu_command_get_cmd (command));
+  bitu_server_t *server = (bitu_server_t *) extra_data;
+  char *cmd = NULL, *message = NULL;
+  char **params = NULL;
+  int i, len;
+
+  if (!bitu_util_extract_params (bitu_command_get_cmd (command), &cmd, &params, &len))
+    {
+      int msgbufsize = 128;
+      message = malloc (msgbufsize);
+      snprintf (message, msgbufsize, "The message seems to be empty");
+    }
+  else
+    {
+      if (cmd[0] == '/')
+        {
+          char *c = cmd;
+          /* skipping the '/' char */
+          message = bitu_server_exec_cmd (server, &(*++c), params, len, NULL);
+        }
+      else
+        message = bitu_server_exec_plugin (server, cmd, params, len, NULL);
+    }
+
+  /* No answer was returned */
+  if (message == NULL)
+    message = strdup ("The plugin returned nothing");
+
+  /* Actually sending the stuff */
+  bitu_transport_send (bitu_command_get_transport (command),
+                       message,
+                       bitu_command_get_from (command));
+
+  /* Cleaning up the command and the message */
+  bitu_command_free (command);
+  free (message);
+
+  /* Freeing the command and all parameters collected */
+  for (i = 0; i < len; i++)
+    free (params[i]);
+  free (params);
+  if (cmd)
+    free (cmd);
+
   return 0;
 }
 
@@ -303,7 +345,7 @@ main (int argc, char **argv)
     if ((bitu_conn_manager_run (connections, tmp->data)) != BITU_CONN_STATUS_OK)
       ta_log_warn (app->logger, "Transport `%s' not initialized", tmp->data);
   ta_list_free (transports);
-  bitu_conn_manager_consume (connections, (bitu_queue_callback_consume_t) _stuff);
+  bitu_conn_manager_consume (connections, (bitu_queue_callback_consume_t) _exec_command, server);
 
   /* Connecting our local management server */
   if (bitu_server_connect (server) == TA_OK)

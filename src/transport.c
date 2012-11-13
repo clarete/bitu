@@ -53,6 +53,7 @@ struct bitu_conn_manager
 typedef struct {
   bitu_queue_t *queue;
   bitu_queue_callback_consume_t callback;
+  void *data;
 } _bitu_consumer_params_t;
 
 
@@ -64,6 +65,9 @@ struct bitu_transport
   const char *(*protocol) (void);
   int (*connect) (bitu_transport_t *transport);
   int (*run) (bitu_transport_t *transport);
+  int (*send) (bitu_transport_t *transport,
+               const char *msg,
+               const char *to);
 };
 
 
@@ -71,6 +75,7 @@ struct bitu_command
 {
   bitu_transport_t *transport;
   char *cmd;
+  char *from;
 };
 
 
@@ -175,7 +180,7 @@ _do_bitu_conn_manager_consume (void *data)
 {
   _bitu_consumer_params_t *params = (_bitu_consumer_params_t *) data;
   printf ("Starting the consumer\n");
-  bitu_queue_consume (params->queue, params->callback);
+  bitu_queue_consume (params->queue, params->callback, params->data);
   free (params);
   return NULL;
 }
@@ -183,11 +188,13 @@ _do_bitu_conn_manager_consume (void *data)
 
 void
 bitu_conn_manager_consume (bitu_conn_manager_t *manager,
-                           bitu_queue_callback_consume_t callback)
+                           bitu_queue_callback_consume_t callback,
+                           void *data)
 {
   _bitu_consumer_params_t *params = malloc (sizeof (_bitu_consumer_params_t));
   params->queue = manager->commands;
   params->callback = callback;
+  params->data = data;
   bitu_util_start_new_thread (_do_bitu_conn_manager_consume, params);
 }
 
@@ -285,12 +292,25 @@ bitu_transport_set_callback_run (bitu_transport_t *transport,
   transport->run = callback;
 }
 
+void
+bitu_transport_set_callback_send (bitu_transport_t *transport,
+                                  bitu_transport_callback_send_t callback)
+{
+  transport->send = callback;
+}
+
 int
 bitu_transport_connect (bitu_transport_t *transport)
 {
   return transport->connect (transport);
 }
 
+
+int
+bitu_transport_send (bitu_transport_t *transport, const char *msg, const char *to)
+{
+  return transport->send (transport, msg, to);
+}
 
 int
 bitu_transport_run (bitu_transport_t *transport)
@@ -304,13 +324,14 @@ bitu_transport_run (bitu_transport_t *transport)
 
 
 bitu_command_t *
-bitu_command_new (bitu_transport_t *transport, const char *cmd)
+bitu_command_new (bitu_transport_t *transport, const char *cmd, const char *from)
 {
   bitu_command_t *command;
   if ((command = malloc (sizeof (bitu_command_t))) == NULL)
     return NULL;
   command->transport = transport;
   command->cmd = strdup (cmd);
+  command->from = strdup (from);
   return command;
 }
 
@@ -319,6 +340,7 @@ void
 bitu_command_free (bitu_command_t *command)
 {
   free (command->cmd);
+  free (command->from);
   free (command);
 }
 
@@ -333,6 +355,12 @@ const char *
 bitu_command_get_cmd (bitu_command_t *command)
 {
   return (const char *) command->cmd;
+}
+
+const char *
+bitu_command_get_from (bitu_command_t *command)
+{
+  return (const char *) command->from;
 }
 
 
@@ -418,7 +446,9 @@ _bitu_queue_pop (bitu_queue_t *queue)
 
 
 void
-bitu_queue_consume (bitu_queue_t *queue, bitu_queue_callback_consume_t callback)
+bitu_queue_consume (bitu_queue_t *queue,
+                    bitu_queue_callback_consume_t callback,
+                    void *extra_data)
 {
   void *data;
 
@@ -439,7 +469,7 @@ bitu_queue_consume (bitu_queue_t *queue, bitu_queue_callback_consume_t callback)
 
       /* Popping the last element out of the list */
       if ((data = _bitu_queue_pop (queue)) != NULL)
-        callback (data);
+        callback (data, extra_data);
 
       fprintf (stderr, "queue::consume() unlocked the mutex\n");
       pthread_mutex_unlock (queue->mutex);

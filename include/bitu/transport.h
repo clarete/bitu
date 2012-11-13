@@ -38,12 +38,14 @@ typedef enum
 
 
 /* Queue api */
-typedef int (*bitu_queue_callback_consume_t) (void *data);
+typedef int (*bitu_queue_callback_consume_t) (void *data, void *extra_data);
 
 bitu_queue_t *bitu_queue_new (void);
 void bitu_queue_free (bitu_queue_t *queue);
 void bitu_queue_add (bitu_queue_t *queue, void *data);
-void bitu_queue_consume (bitu_queue_t *queue, bitu_queue_callback_consume_t callback);
+void bitu_queue_consume (bitu_queue_t *queue,
+                         bitu_queue_callback_consume_t callback,
+                         void *data);
 
 
 /* Transport manager API */
@@ -54,12 +56,16 @@ int bitu_conn_manager_get_n_transports (bitu_conn_manager_t *manager);
 ta_list_t *bitu_conn_manager_get_transports (bitu_conn_manager_t *manager);
 bitu_transport_t *bitu_conn_manager_get_transport (bitu_conn_manager_t *manager, const char *uri);
 bitu_conn_status_t bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri);
-void bitu_conn_manager_consume (bitu_conn_manager_t *manager, bitu_queue_callback_consume_t callback);
+void bitu_conn_manager_consume (bitu_conn_manager_t *manager,
+                                bitu_queue_callback_consume_t callback,
+                                void *data);
 
 
 /* Transport api */
 typedef int (*bitu_transport_callback_connect_t) (bitu_transport_t *transport);
 typedef int (*bitu_transport_callback_run_t) (bitu_transport_t *transport);
+typedef int (*bitu_transport_callback_send_t) (bitu_transport_t *transport,
+                                               const char *msg, const char *to);
 
 bitu_transport_t *bitu_transport_new (const char *uri);
 ta_iri_t *bitu_transport_get_uri (bitu_transport_t *transport);
@@ -71,14 +77,19 @@ void bitu_transport_set_callback_connect (bitu_transport_t *transport,
                                           bitu_transport_callback_connect_t callback);
 void bitu_transport_set_callback_run (bitu_transport_t *transport,
                                       bitu_transport_callback_run_t callback);
+void bitu_transport_set_callback_send (bitu_transport_t *transport,
+                                       bitu_transport_callback_send_t callback);
 void bitu_transport_queue_command (bitu_transport_t *transport, bitu_command_t *cmd);
+int bitu_transport_send (bitu_transport_t *transport, const char *msg, const char *to);
 
 
 /* Command api */
-bitu_command_t *bitu_command_new (bitu_transport_t *transport, const char *cmd);
+bitu_command_t *bitu_command_new (bitu_transport_t *transport,
+                                  const char *cmd, const char *from);
 void bitu_command_free (bitu_command_t *command);
 bitu_transport_t *bitu_command_get_transport (bitu_command_t *command);
 const char *bitu_command_get_cmd (bitu_command_t *command);
+const char *bitu_command_get_from (bitu_command_t *command);
 
 
 /* Forward declarations for transports */

@@ -64,61 +64,8 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
   if (rawbody == NULL)
     return 0;
 
-  command = bitu_command_new (transport, rawbody);
+  command = bitu_command_new (transport, rawbody, pak->from->full);
   bitu_transport_queue_command (transport, command);
-
-
-  /* char *rawbody, *cmd = NULL, *message = NULL; */
-  /* char **params = NULL; */
-  /* int i, len; */
-  /* iks *answer; */
-  /* bitu_server_t *server; */
-
-  /* server = (bitu_server_t *) data; */
-  /* if (server == NULL) */
-  /*   return 0; */
-
-  /* rawbody = iks_find_cdata (pak->x, "body"); */
-  /* if (rawbody == NULL) */
-  /*   return 0; */
-
-  /* if (!bitu_util_extract_params (rawbody, &cmd, &params, &len)) */
-  /*   { */
-  /*     int msgbufsize = 128; */
-  /*     message = malloc (msgbufsize); */
-  /*     snprintf (message, msgbufsize, "The message seems to be empty"); */
-  /*   } */
-  /* else */
-  /*   { */
-  /*     if (cmd[0] == '/') */
-  /*       { */
-  /*         char *c = cmd; */
-  /*         /\* skipping the '/' char *\/ */
-  /*         message = bitu_server_exec_cmd (server, &(*++c), params, len, NULL); */
-  /*       } */
-  /*     else */
-  /*       message = bitu_server_exec_plugin (server, cmd, params, len, NULL); */
-  /*   } */
-
-  /* /\* No answer was returned *\/ */
-  /* if (message == NULL) */
-  /*   message = strdup ("The plugin returned nothing"); */
-
-  /* /\* Feeding the user back *\/ */
-  /* answer = iks_make_msg (IKS_TYPE_CHAT, pak->from->full, message); */
-  /* ta_xmpp_client_send (client, answer); */
-
-  /* /\* Freeing all parameters collected *\/ */
-  /* for (i = 0; i < len; i++) */
-  /*   free (params[i]); */
-  /* free (params); */
-
-  /* /\* Freeing all other stuff *\/ */
-  /* iks_delete (answer); */
-  /* if (message) */
-  /*   free (message); */
-  /* if (cmd) */
-  /*   free (cmd); */
   return 0;
 }
 
@@ -251,10 +198,31 @@ _xmpp_run (bitu_transport_t *transport)
   return ta_xmpp_client_run (client, 0);
 }
 
+
+static int
+_xmpp_send (bitu_transport_t *transport, const char *msg, const char *to)
+{
+  int result;
+  iks *answer;
+  ta_xmpp_client_t *client =
+    (ta_xmpp_client_t *) bitu_transport_get_data (transport);
+
+  /* Feeding the user back */
+  answer = iks_make_msg (IKS_TYPE_CHAT, to, msg);
+  result = ta_xmpp_client_send (client, answer);
+
+  /* Freeing stuff */
+  iks_delete (answer);
+
+  return result;
+}
+
+
 int
 _bitu_xmpp_transport (bitu_transport_t *transport)
 {
   bitu_transport_set_callback_connect (transport, _xmpp_connect);
   bitu_transport_set_callback_run (transport, _xmpp_run);
+  bitu_transport_set_callback_send (transport, _xmpp_send);
   return TA_OK;
 }

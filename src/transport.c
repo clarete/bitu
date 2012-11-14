@@ -474,6 +474,5 @@ bitu_queue_consume (bitu_queue_t *queue,
       fprintf (stderr, "queue::consume() unlocked the mutex\n");
       pthread_mutex_unlock (queue->mutex);
       pthread_cond_signal (queue->not_full);
-      usleep (1000000);
     }
 }

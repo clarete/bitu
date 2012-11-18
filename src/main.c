@@ -139,9 +139,12 @@ int _exec_command (void *data, void *extra_data)
     message = strdup ("The plugin returned nothing");
 
   /* Actually sending the stuff */
-  bitu_transport_send (bitu_command_get_transport (command),
-                       message,
-                       bitu_command_get_from (command));
+  if (bitu_transport_send (bitu_command_get_transport (command),
+                           message,
+                           bitu_command_get_from (command)) != TA_OK)
+    ta_log_warn ((bitu_server_get_app (server))->logger,
+                 "Unable to send a message to the user %s",
+                 bitu_command_get_from (command));
 
   /* Cleaning up the command and the message */
   bitu_command_free (command);

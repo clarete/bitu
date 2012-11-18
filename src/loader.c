@@ -33,6 +33,7 @@ struct bitu_plugin
   const char *(*name) (void);
   int (*num_params) (void);
   char *(*execute) (char **);
+  int (*match) (char *);
 };
 
 struct bitu_plugin_ctx

@@ -28,6 +28,7 @@
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -37,12 +38,12 @@
 #include <errno.h>
 #include <glob.h>
 #include <taningia/taningia.h>
-#include <bitu/app.h>
 #include <bitu/util.h>
 #include <bitu/loader.h>
-#include <bitu/server.h>
 #include <bitu/conf.h>
 #include <bitu/transport.h>
+
+#include "app.h"
 
 #ifdef __APPLE__
 #undef daemon
@@ -111,28 +112,29 @@ static
 int _exec_command (void *data, void *extra_data)
 {
   bitu_command_t *command = (bitu_command_t *) data;
-  bitu_server_t *server = (bitu_server_t *) extra_data;
+  char *line = NULL, *stripped = NULL;
   char *cmd = NULL, *message = NULL;
   char **params = NULL;
   int i, len;
 
-  if (!bitu_util_extract_params (bitu_command_get_cmd (command), &cmd, &params, &len))
+  /* Trim performes changes in place, we need to dup it before to
+   * avoid leaking data when we free it */
+  line = strdup (bitu_command_get_cmd (command));
+  stripped = bitu_util_strstrip (line);
+
+  /* Handling commands, no need to mess with plugins */
+  if (stripped[0] == '/')
     {
-      int msgbufsize = 128;
-      message = malloc (msgbufsize);
-      snprintf (message, msgbufsize, "The message seems to be empty");
+      if (bitu_util_extract_params (stripped, &cmd, &params, &len) != TA_OK)
+        printf ("I should execute an internal command\n");
     }
   else
     {
-      if (cmd[0] == '/')
-        {
-          char *c = cmd;
-          /* skipping the '/' char */
-          message = bitu_server_exec_cmd (server, &(*++c), params, len, NULL);
-        }
-      else
-        message = bitu_server_exec_plugin (server, cmd, params, len, NULL);
+      printf ("I should execute a plugin\n");
+      /* TODO: Try to find the plugin */
+      //bitu_plugin_t *plugin = bitu_plugin_ctx_find_for_cmdline (
     }
+
 
   /* No answer was returned */
   if (message == NULL)
@@ -142,9 +144,10 @@ int _exec_command (void *data, void *extra_data)
   if (bitu_transport_send (bitu_command_get_transport (command),
                            message,
                            bitu_command_get_from (command)) != TA_OK)
-    ta_log_warn ((bitu_server_get_app (server))->logger,
-                 "Unable to send a message to the user %s",
-                 bitu_command_get_from (command));
+    /* ta_log_warn (app->logger, */
+    /*              "Unable to send a message to the user %s", */
+    /*              bitu_command_get_from (command)); */
+    ;
 
   /* Cleaning up the command and the message */
   bitu_command_free (command);
@@ -160,12 +163,42 @@ int _exec_command (void *data, void *extra_data)
   return 0;
 }
 
+/* signal handler stuff */
+
+static void
+_signal_handler (int sig, siginfo_t *si, void *data)
+{
+  switch (sig)
+    {
+    case SIGPIPE:
+      /* Doing nothing here. Just avoiding the default behaviour that
+       * kills the program. */
+      break;
+
+      /* Add more signals here to handle them when needed. */
+
+    default:
+      break;
+    }
+}
+
+static void
+_setup_sigaction (bitu_app_t *app)
+{
+  struct sigaction sa;
+  sa.sa_flags = SA_SIGINFO;
+  sa.sa_sigaction = _signal_handler;
+  sigemptyset (&sa.sa_mask);
+
+  if (sigaction (SIGPIPE, &sa, NULL) == -1)
+    ta_log_warn (app->logger, "Unable to install sigaction to catch SIGPIPE");
+}
+
 
 int
 main (int argc, char **argv)
 {
   bitu_app_t *app;
-  bitu_server_t *server;
   ta_list_t *conf = NULL, *transports = NULL;
   ta_list_t *commands = NULL, *tmp = NULL;
   bitu_conn_manager_t *connections = NULL;
@@ -185,6 +218,8 @@ main (int argc, char **argv)
   };
 
   ta_global_state_setup ();
+
+  _setup_sigaction (NULL);
 
   connections = bitu_conn_manager_new ();
 
@@ -276,6 +311,9 @@ main (int argc, char **argv)
   /* Some param validation */
   if (bitu_conn_manager_get_n_transports (connections) == 0)
     {
+      const ta_error_t *error;
+      if ((error = ta_error_last ()) != NULL)
+        printf ("Error: %s\n", error->message);
       usage (argv[0]);
       ta_list_free (commands);
       exit (EXIT_FAILURE);
@@ -306,23 +344,23 @@ main (int argc, char **argv)
 
   /* Initializing the local server that will handle configuration
    * interaction. */
-  server = bitu_server_new (sock_path, app);
+  /* server = bitu_server_new (sock_path); */
   free (sock_path);
 
   /* Running all commands found in the config file. */
-  for (tmp = commands; tmp; tmp = tmp->next)
-    {
-      bitu_conf_entry_t *entry;
-      char *answer = NULL;
-      int answer_size;
-      entry = (bitu_conf_entry_t *) tmp->data;
-      answer = bitu_server_exec_cmd (server, entry->cmd, entry->params,
-                                     entry->nparams, &answer_size);
-      if (answer && answer_size > 1)
-        ta_log_warn (app->logger, "Warn running command %s: %s",
-                     entry->cmd, answer);
-      free (answer);
-    }
+  /* for (tmp = commands; tmp; tmp = tmp->next) */
+  /*   { */
+  /*     bitu_conf_entry_t *entry; */
+  /*     char *answer = NULL; */
+  /*     int answer_size; */
+  /*     entry = (bitu_conf_entry_t *) tmp->data; */
+  /*     answer = bitu_server_exec_cmd (server, entry->cmd, entry->params, */
+  /*                                    entry->nparams, &answer_size); */
+  /*     if (answer && answer_size > 1) */
+  /*       ta_log_warn (app->logger, "Warn running command %s: %s", */
+  /*                    entry->cmd, answer); */
+  /*     free (answer); */
+  /*   } */
   ta_list_free (commands);
 
   /* Sending the rest of the program to the background if requested */
@@ -348,11 +386,13 @@ main (int argc, char **argv)
     if ((bitu_conn_manager_run (connections, tmp->data)) != BITU_CONN_STATUS_OK)
       ta_log_warn (app->logger, "Transport `%s' not initialized", tmp->data);
   ta_list_free (transports);
-  bitu_conn_manager_consume (connections, (bitu_queue_callback_consume_t) _exec_command, server);
+  bitu_conn_manager_consume (connections, (bitu_queue_callback_consume_t) _exec_command, NULL);
 
-  /* Connecting our local management server */
-  if (bitu_server_connect (server) == TA_OK)
-    bitu_server_run (server);
+  /* Our current main loop is this crap, sorry. */
+  while (1)
+    {
+      sleep (1);
+    }
 
   /* Cleaning things up after shutting the server down */
   if (pid_file != NULL && access (pid_file, X_OK) == 0)

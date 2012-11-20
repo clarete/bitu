@@ -19,20 +19,32 @@
 #ifndef BITU_SERVER_PRIV_H_
 #define BITU_SERVER_PRIV_H_ 1
 
+#include <taningia/taningia.h>
 #include "hashtable.h"
 
-typedef char * (*command_t) (bitu_server_t *, char **, int);
-
-struct _bitu_server
+struct bitu_server
 {
+  ta_log_t *logger;
   char *sock_path;
-  bitu_app_t *app;
   int sock;
-  hashtable_t *commands;
-  hashtable_t *env;
+  hashtable_t *clients;
+  bitu_server_callbacks_t callbacks;
+  const char *data;
   int can_run;
 };
 
-void _server_register_commands (bitu_server_t *server);
+
+typedef struct
+{
+  char *id;
+  int socket;
+} bitu_client_t;
+
+
+/* Client API */
+bitu_client_t *bitu_client_new (int socket);
+void bitu_client_free (bitu_client_t *client);
+const char *bitu_client_get_id (bitu_client_t *client);
+int bitu_client_get_socket (bitu_client_t *client);
 
 #endif  /* BITU_SERVER_PRIV_H_ */

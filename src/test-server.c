@@ -18,30 +18,19 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <taningia/taningia.h>
 #include <bitu/server.h>
-#include <bitu/app.h>
 #include <bitu/loader.h>
 
 int
 main (int argc, char **argv)
 {
-  bitu_app_t *app;
   bitu_server_t *server;
+  bitu_server_callbacks_t callbacks;
 
-  /* We actually don't have a constructor (nor destructor) to the app
-   * struct.  This is a test program, the only app struct instantiated
-   * should be placed in the main call of the whole program. Look at
-   * the `main.c' file for this. */
-  if ((app = malloc (sizeof (bitu_app_t))) == NULL)
-    return EXIT_FAILURE;
-
-  /* Here I'm filling all fields of the app struct. */
-  app->logger = ta_log_new ("test-server");
-  app->xmpp = ta_xmpp_client_new ("jid@invalid", "fakepasswd", NULL, 5222);
-  app->plugin_ctx = bitu_plugin_ctx_new ();
-
-  server = bitu_server_new ("/tmp/bleh.sock", app);
+  memset (&callbacks, 0, sizeof (callbacks));
+  server = bitu_server_new ("/tmp/bleh.sock", callbacks);
   bitu_server_connect (server);
 
   /* I don't like this way. I think we should have a
@@ -52,10 +41,6 @@ main (int argc, char **argv)
 
   /* Time to free everything related to the server and app stuff. */
   bitu_server_free (server);    /* app will not be touched here */
-  ta_object_unref (app->logger);
-  ta_object_unref (app->xmpp);
-  bitu_plugin_ctx_free (app->plugin_ctx);
-  free (app);
 
   /* We're done =P */
   return 0;

@@ -20,20 +20,27 @@
 #define BITU_SERVER_H_ 1
 
 #include <sys/types.h>
-#include <bitu/app.h>
 
-typedef struct _bitu_server bitu_server_t;
+typedef struct bitu_server bitu_server_t;
+typedef void (*bitu_server_event_callback_t) (bitu_server_t *server,
+                                              const char *event,
+                                              const char *client,
+                                              const char *message);
+typedef struct
+{
+  bitu_server_event_callback_t message_received;
+} bitu_server_callbacks_t;
 
-bitu_server_t *bitu_server_new (const char *sock_path, bitu_app_t *app);
+
+bitu_server_t *bitu_server_new (const char *sock_path,
+                                bitu_server_callbacks_t callbacks);
 void bitu_server_free (bitu_server_t *server);
-bitu_app_t *bitu_server_get_app (bitu_server_t *server);
+void bitu_server_set_data (bitu_server_t *server, void *data);
+void *bitu_server_get_data (bitu_server_t *server);
 int bitu_server_connect (bitu_server_t *server);
-char *bitu_server_exec_cmd_line (bitu_server_t *server,
-                                 const char *cmdline);
-char *bitu_server_exec_cmd (bitu_server_t *server, const char *cmd,
-                            char **params, int nparams, int *answer_size);
-char *bitu_server_exec_plugin (bitu_server_t *server, const char *plugin_name,
-                               char **params, int nparams, int *answer_size);
-void bitu_server_run (bitu_server_t *server);
+int bitu_server_run (bitu_server_t *server);
+int bitu_server_send (bitu_server_t *server, const char *msg, const char *to);
+void bitu_server_disconnect (bitu_server_t *server);
+
 
 #endif /* BITU_SERVER_H_ */

@@ -20,6 +20,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <pthread.h>
+#include <uuid/uuid.h>
 #include <bitu/util.h>
 
 char *
@@ -151,4 +152,15 @@ bitu_util_start_new_thread (bitu_util_callback_t callback, void *data)
   pthread_t thread;
   pthread_create (&thread, NULL, callback, data);
   pthread_detach (thread);
+}
+
+char *
+bitu_util_uuid4 (void)
+{
+  char buf[36];
+  uuid_t uuid;
+
+  uuid_generate (uuid);
+  uuid_unparse (uuid, buf);
+  return strdup (buf);
 }

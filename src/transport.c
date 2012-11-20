@@ -228,7 +228,12 @@ bitu_transport_new (const char *uri)
 
   /* Looking for the right transport. Possible values hardcoded by
    * now */
-  if (strcmp (scheme, "xmpp") == 0)
+  if (strcmp (scheme, "file") == 0)
+    {
+      if (_bitu_local_transport (transport) != TA_OK)
+        goto error;
+    }
+  else if (strcmp (scheme, "xmpp") == 0)
     {
       if (_bitu_xmpp_transport (transport) != TA_OK)
         goto error;

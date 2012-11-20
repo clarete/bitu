@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <signal.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/select.h>
@@ -29,7 +28,6 @@
 #include <sys/un.h>
 #include <string.h>
 #include <taningia/taningia.h>
-#include <bitu/app.h>
 #include <bitu/server.h>
 #include <bitu/util.h>
 
@@ -39,98 +37,69 @@
 
 #define LISTEN_BACKLOG 1
 
-/* signal handler stuff */
 
-static void
-_signal_handler (int sig, siginfo_t *si, void *data)
+/* Client data type */
+
+
+bitu_client_t *
+bitu_client_new (int socket)
 {
-  switch (sig)
-    {
-    case SIGPIPE:
-      /* Doing nothing here. Just avoiding the default behaviour that
-       * kills the program. */
-      break;
-
-      /* Add more signals here to handle them when needed. */
-
-    default:
-      break;
-    }
+  bitu_client_t *client;
+  if ((client = malloc (sizeof (bitu_client_t))) == NULL)
+    return NULL;
+  client->id = bitu_util_uuid4 ();
+  client->socket = socket;
+  return client;
 }
 
-static void
-_setup_sigaction (bitu_server_t *server)
-{
-  struct sigaction sa;
-  sa.sa_flags = SA_SIGINFO;
-  sa.sa_sigaction = _signal_handler;
-  sigemptyset (&sa.sa_mask);
 
-  if (sigaction (SIGPIPE, &sa, NULL) == -1)
-    ta_log_warn (server->app->logger,
-                 "Unable to install sigaction to catch SIGPIPE");
+void
+bitu_client_free (bitu_client_t *client)
+{
+  free (client->id);
+  free (client);
 }
+
+
+const char *
+bitu_client_get_id (bitu_client_t *client)
+{
+  return (const char *) client->id;
+}
+
+
+int
+bitu_client_get_socket (bitu_client_t *client)
+{
+  return client->socket;
+}
+
 
 /* Public API */
 
+
 bitu_server_t *
-bitu_server_new (const char *sock_path, bitu_app_t *app)
+bitu_server_new (const char *sock_path, bitu_server_callbacks_t callbacks)
 {
   bitu_server_t *server;
   if ((server = malloc (sizeof (bitu_server_t))) == NULL)
     return NULL;
+  server->logger = ta_log_new ("bitu-server");
   server->sock_path = strdup (sock_path);
-  server->app = app;
-  server->commands = hashtable_create (hash_string, string_equal, NULL, NULL);
-  server->env = hashtable_create (hash_string, string_equal, free, free);
+  server->clients = hashtable_create (hash_string, string_equal,
+                                      NULL, /* No need to free keys */
+                                      (free_fn) bitu_client_free);
   server->can_run = 1;
-
-  /* Registering commands */
-  _server_register_commands (server);
-  _setup_sigaction (server);
+  server->callbacks = callbacks;
   return server;
 }
+
 
 void
 bitu_server_free (bitu_server_t *server)
 {
-  ta_log_info (server->app->logger, "Gracefully exiting, see you!");
-
-  /* Cleaning up app properties */
-  if (server->app->plugin_ctx)
-    {
-      bitu_plugin_ctx_free (server->app->plugin_ctx);
-      server->app->plugin_ctx = NULL;
-    }
-  if (server->app->xmpp)
-    {
-      ta_object_unref (server->app->xmpp);
-      server->app->xmpp = NULL;
-    }
-  if (server->app->logger)
-    {
-      ta_object_unref (server->app->logger);
-      server->app->logger = NULL;
-    }
-  if (server->app->logfile)
-    {
-      free (server->app->logfile);
-      server->app->logfile = NULL;
-    }
-  if (server->app->logfd > -1)
-    {
-      close (server->app->logfd);
-      server->app->logfd = -1;
-    }
-  if (server->app)
-    {
-      free (server->app);
-      server->app = NULL;
-    }
-
-  /* Cleaning server attrs */
-  hashtable_destroy (server->commands);
-  hashtable_destroy (server->env);
+  ta_log_info (server->logger, "Gracefully exiting, see you!");
+  hashtable_destroy (server->clients);
   server->can_run = 0;
   close (server->sock);
   unlink (server->sock_path);
@@ -138,11 +107,20 @@ bitu_server_free (bitu_server_t *server)
   free (server);
 }
 
-bitu_app_t *
-bitu_server_get_app (bitu_server_t *server)
+
+void
+bitu_server_set_data (bitu_server_t *server, void *data)
 {
-  return server->app;
+  server->data = data;
 }
+
+
+void *
+bitu_server_get_data (bitu_server_t *server)
+{
+  return (void *) server->data;
+}
+
 
 int
 bitu_server_connect (bitu_server_t *server)
@@ -152,7 +130,7 @@ bitu_server_connect (bitu_server_t *server)
 
   if ((server->sock = socket (AF_UNIX, SOCK_STREAM, 0)) == -1)
     {
-      ta_log_critical (server->app->logger, "Unable to open socket server");
+      ta_log_critical (server->logger, "Unable to open socket server");
       return TA_ERROR;
     }
 
@@ -163,7 +141,7 @@ bitu_server_connect (bitu_server_t *server)
   len = strlen (local.sun_path) + sizeof (local.sun_family);
   if (bind (server->sock, (struct sockaddr *) &local, len) == -1)
     {
-      ta_log_critical (server->app->logger,
+      ta_log_critical (server->logger,
                        "Error when binding to socket %s: %s",
                        server->sock_path,
                        strerror (errno));
@@ -171,125 +149,16 @@ bitu_server_connect (bitu_server_t *server)
     }
   if (listen (server->sock, LISTEN_BACKLOG) == -1)
     {
-      ta_log_critical (server->app->logger,
+      ta_log_critical (server->logger,
                        "Error to listen to connections: %s",
                        strerror (errno));
       return TA_ERROR;
     }
 
-  ta_log_info (server->app->logger,
+  ta_log_info (server->logger,
                "Local server bound to the socket in %s",
                server->sock_path);
   return TA_OK;
-}
-
-char *
-bitu_server_exec_cmd (bitu_server_t *server, const char *cmd,
-                      char **params, int nparams, int *answer_size)
-{
-  char *answer = NULL;
-  int msg_size, msgbufsize = 128;
-  command_t command;
-
-  answer = malloc (msgbufsize);
-  if ((command = hashtable_get (server->commands, cmd)) == NULL)
-    {
-      msg_size =
-        snprintf (answer, msgbufsize, "Command `%s' not found", cmd);
-      ta_log_warn (server->app->logger, answer);
-    }
-  /*
-  else if (command.num_params != num_params)
-    {
-      msg_size =
-        snprintf (answer, msgbufsize,
-                  "Command `%s' waits for %d args but %d were passed",
-                  cmd, command.num_params, num_params);
-      ta_log_warn (server->app->logger, answer);
-    }
-  */
-  else
-    {
-      ta_log_debug (server->app->logger, "Running command `%s'", cmd);
-      answer = command (server, params, nparams);
-      if (answer != NULL)
-        msg_size = strlen (answer);
-      else
-        {
-          answer = malloc (1);
-          memset (answer, 0, 1);
-          msg_size = 1;
-        }
-    }
-
-  if (answer_size)
-    *answer_size = msg_size;
-  return answer;
-}
-
-char *
-bitu_server_exec_cmd_line (bitu_server_t *server, const char *cmdline)
-{
-  char *cmd = NULL, *answer = NULL;
-  char **params = NULL;
-  int msgbufsize = 128;
-  int num_params;
-
-  answer = malloc (msgbufsize);
-  if (cmdline == NULL)
-    {
-      snprintf (answer, msgbufsize, "Empty command line");
-      ta_log_warn (server->app->logger, answer);
-    }
-  else
-    {
-      if (!bitu_util_extract_params (cmdline, &cmd, &params, &num_params))
-        {
-          snprintf (answer, msgbufsize, "Command seems to be empty");
-          ta_log_warn (server->app->logger, answer);
-        }
-      else
-        {
-          free (answer);
-          answer = bitu_server_exec_cmd (server, cmd, params,
-                                         num_params, NULL);
-        }
-    }
-  return answer;
-}
-
-char *
-bitu_server_exec_plugin (bitu_server_t *server, const char *plugin_name,
-                         char **params, int nparams, int *answer_size)
-{
-  bitu_plugin_ctx_t *plugin_ctx;
-  bitu_plugin_t *plugin;
-  int msgbufsize = 128;
-  char *message = NULL;
-
-  plugin_ctx = server->app->plugin_ctx;
-
-  if ((plugin = bitu_plugin_ctx_find (plugin_ctx, plugin_name)) == NULL)
-    {
-      message = malloc (msgbufsize);
-      snprintf (message, msgbufsize, "Plugin `%s' not found", plugin_name);
-    }
-  else
-    {
-      /* Validating number of parameters */
-      if (bitu_plugin_num_params (plugin) != nparams)
-        {
-          message = malloc (msgbufsize);
-          snprintf (message, msgbufsize,
-                    "Wrong number of parameters. `%s' "
-                    "receives %d but %d were passed", plugin_name,
-                    bitu_plugin_num_params (plugin),
-                    nparams);
-        }
-      else
-        message = bitu_plugin_execute (plugin, params);
-    }
-  return message;
 }
 
 
@@ -318,8 +187,7 @@ bitu_server_recv (bitu_server_t *server, int sock,
     return 0;
   else if (r == -1)
     {
-      ta_log_error (server->app->logger, "Error in select(): %s",
-                    strerror (errno));
+      ta_log_error (server->logger, "Error in select(): %s", strerror (errno));
       return -1;
     }
   if (FD_ISSET (sock, &fds))
@@ -329,8 +197,7 @@ bitu_server_recv (bitu_server_t *server, int sock,
       while (n == -1 && (errno == EAGAIN));
       if (n < 0)
         {
-          ta_log_error (server->app->logger, "Error in recv(): %s",
-                        strerror (errno));
+          ta_log_error (server->logger, "Error in recv(): %s", strerror (errno));
           return -1;
         }
       else
@@ -340,30 +207,36 @@ bitu_server_recv (bitu_server_t *server, int sock,
 }
 
 int
-bitu_server_send (bitu_server_t *server, int sock,
-                  char *buf, size_t bufsize)
+bitu_server_send (bitu_server_t *server, const char *msg, const char *to)
 {
+  bitu_client_t * client;
   int n;
+  int sock;
   size_t sent = 0;
+  size_t bufsize = strlen (msg);
+
+  if ((client = hashtable_get (server->clients, to)) == NULL)
+    return TA_ERROR;
+
+  sock = bitu_client_get_socket (client);
 
   while (sent < bufsize)
     {
-      n = send (sock, buf, bufsize, 0);
+      n = send (sock, msg, bufsize, 0);
       if (n == -1 && errno == EAGAIN)
         continue;
       if (n == -1)
         {
-          ta_log_error (server->app->logger,
-                        "Error in send(): %s",
-                        strerror (errno));
-          return -1;
+          ta_log_error (server->logger, "Error in send(): %s", strerror (errno));
+          return TA_ERROR;
         }
       sent += n;
     }
-  return 0;
+  return TA_OK;
 }
 
-void
+
+int
 bitu_server_run (bitu_server_t *server)
 {
   int sock;
@@ -371,8 +244,10 @@ bitu_server_run (bitu_server_t *server)
 
   while (server->can_run)
     {
+      bitu_client_t *client;
+      const char *client_id;
       socklen_t len;
-      char *str = NULL, *answer = NULL;
+      char *str = NULL;
       int full_len, allocated;
       int timeout;
 
@@ -387,12 +262,17 @@ bitu_server_run (bitu_server_t *server)
       /* Unlucky, some thing is wrong. Report and fail */
       if (sock == -1)
         {
-          ta_log_error (server->app->logger,
-                        "Error in accept(): %s",
-                        strerror (errno));
+          ta_log_error (server->logger, "Error in accept(): %s", strerror (errno));
           continue;
         }
-      ta_log_info (server->app->logger, "Client connected");
+      ta_log_info (server->logger, "Client connected");
+
+      /* Let's save the client with a uniq identifier to make it
+       * possible to find the correct client when we need to send a
+       * messages to this client in the future */
+      client = bitu_client_new (sock);
+      client_id = bitu_client_get_id (client);
+      hashtable_set (server->clients, (void *) client_id, client);
 
       while (1)
         {
@@ -408,10 +288,10 @@ bitu_server_run (bitu_server_t *server)
               int n, bufsize = 128;
               char buf[bufsize];
               n = bitu_server_recv (server, sock, buf, bufsize, timeout);
-              ta_log_debug (server->app->logger, "recv() returned: %d", n);
+              ta_log_debug (server->logger, "recv() returned: %d", n);
               if (n == 0)
                 {
-                  ta_log_info (server->app->logger, "End of client stream");
+                  ta_log_info (server->logger, "End of client stream");
                   break;
                 }
               if (n < 0)
@@ -444,21 +324,18 @@ bitu_server_run (bitu_server_t *server)
               (str && strcmp (str, "exit") == 0) ||
               (str && strlen (str) < 2))
             {
+              hashtable_del (server->clients, client_id);
               close (sock);
               break;
             }
 
-          /* Finally we try to execute the received command. */
-          if ((answer = bitu_server_exec_cmd_line (server, str)) != NULL)
-            {
-              int ret;
-              ret = bitu_server_send (server, sock, answer, strlen (answer));
-              if (answer)
-                free (answer);
-              if (ret == -1)
-                break;
-            }
-          bitu_server_send (server, sock, "\0", 1);
+          /* We just received a message, let's fire the callback */
+          if (server->callbacks.message_received)
+            server->callbacks.message_received (server,
+                                                "message-received",
+                                                client_id,
+                                                str);
         }
     }
+  return TA_OK;
 }

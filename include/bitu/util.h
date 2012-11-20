@@ -25,5 +25,6 @@ char * bitu_util_strstrip (char *string);
 int bitu_util_extract_params (const char *line, char **cmd,
                               char ***params, int *len);
 void bitu_util_start_new_thread (bitu_util_callback_t callback, void *data);
+char *bitu_util_uuid4 (void);
 
 #endif /* BITU_UTIL_H_ */

@@ -20,17 +20,26 @@
 #define BITU_APP_H_ 1
 
 #include <taningia/taningia.h>
-#include <bitu/loader.h>
 #include <bitu/transport.h>
+#include <bitu/loader.h>
+#include <bitu/server.h>
+
+#include "hashtable.h"
 
 typedef struct {
+  /* Everybody needs to log stuff */
   ta_log_t *logger;
-  ta_xmpp_client_t *xmpp;
-  bitu_plugin_ctx_t *plugin_ctx;
+
+  /* The main components */
+  hashtable_t *environment;
   bitu_conn_manager_t *connections;
+  bitu_plugin_ctx_t *plugin_ctx;
+
+  /* Stuff needed in the main.c file */
   char *logfile;
   int logfd;
   int logflags;
 } bitu_app_t;
+
 
 #endif /* BITU_APP_H_ */

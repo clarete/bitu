@@ -93,6 +93,7 @@ const char *bitu_command_get_from (bitu_command_t *command);
 
 
 /* Forward declarations for transports */
+extern int _bitu_local_transport (bitu_transport_t *transport);
 extern int _bitu_xmpp_transport (bitu_transport_t *transport);
 extern int _bitu_irc_transport (bitu_transport_t *transport);
 

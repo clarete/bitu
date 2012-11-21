@@ -21,14 +21,6 @@
 
 #include <taningia/taningia.h>
 
-typedef struct
-{
-  char *cmd;
-  char **params;
-  int nparams;
-} bitu_conf_entry_t;
-
 ta_list_t *bitu_conf_read_from_file (const char *file_path);
-void bitu_conf_list_free (ta_list_t *conf);
 
 #endif /* BITU_CONF_H_ */

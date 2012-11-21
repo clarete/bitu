@@ -59,6 +59,7 @@ typedef struct {
 
 struct bitu_transport
 {
+  ta_log_t *logger;
   bitu_queue_t *commands;
   ta_iri_t *uri;
   void *data;
@@ -74,8 +75,11 @@ struct bitu_transport
 struct bitu_command
 {
   bitu_transport_t *transport;
-  char *cmd;
   char *from;
+  char *cmd;
+  char *name;
+  char **params;
+  int nparams;
 };
 
 
@@ -225,6 +229,7 @@ bitu_transport_new (const char *uri)
   /* Allocating memory for the new transport */
   transport = malloc (sizeof (bitu_transport_t));
   transport->uri = uri_obj;
+  transport->logger = NULL;
 
   /* Looking for the right transport. Possible values hardcoded by
    * now */
@@ -269,6 +274,18 @@ ta_iri_t *
 bitu_transport_get_uri (bitu_transport_t *transport)
 {
   return transport->uri;
+}
+
+ta_log_t *
+bitu_transport_get_logger (bitu_transport_t *transport)
+{
+  return transport->logger;
+}
+
+void
+bitu_transport_set_logger (bitu_transport_t *transport, ta_log_t *logger)
+{
+  transport->logger = logger;
 }
 
 void *
@@ -332,11 +349,30 @@ bitu_command_t *
 bitu_command_new (bitu_transport_t *transport, const char *cmd, const char *from)
 {
   bitu_command_t *command;
+  char *name;
+  char **params;
+  int nparams;
+
   if ((command = malloc (sizeof (bitu_command_t))) == NULL)
     return NULL;
   command->transport = transport;
   command->cmd = strdup (cmd);
-  command->from = strdup (from);
+  command->from = from ? strdup (from) : NULL;
+
+  /* Filling out some optional arguments after parsing a command */
+  if (bitu_util_extract_params (cmd, &name, &params, &nparams) == TA_OK)
+    {
+      command->name = name;
+      command->params = params;
+      command->nparams = nparams;
+    }
+  else
+    {
+      command->name = NULL;
+      command->params = NULL;
+      command->nparams = -1;
+    }
+
   return command;
 }
 
@@ -345,7 +381,8 @@ void
 bitu_command_free (bitu_command_t *command)
 {
   free (command->cmd);
-  free (command->from);
+  if (command->from)
+    free (command->from);
   free (command);
 }
 
@@ -357,15 +394,33 @@ bitu_command_get_transport (bitu_command_t *command)
 }
 
 const char *
+bitu_command_get_from (bitu_command_t *command)
+{
+  return (const char *) command->from;
+}
+
+const char *
 bitu_command_get_cmd (bitu_command_t *command)
 {
   return (const char *) command->cmd;
 }
 
 const char *
-bitu_command_get_from (bitu_command_t *command)
+bitu_command_get_name (bitu_command_t *command)
 {
-  return (const char *) command->from;
+  return (const char *) command->name;
+}
+
+const char **
+bitu_command_get_params (bitu_command_t *command)
+{
+  return (const char **) command->params;
+}
+
+int
+bitu_command_get_nparams (bitu_command_t *command)
+{
+  return command->nparams;
 }
 
 

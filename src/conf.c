@@ -22,6 +22,7 @@
 #include <taningia/taningia.h>
 #include <bitu/util.h>
 #include <bitu/conf.h>
+#include <bitu/transport.h>
 
 #define LINE_LEN_MAX 255
 
@@ -31,50 +32,24 @@ bitu_conf_read_from_file (const char *file_path)
   FILE *fd;
   char line[LINE_LEN_MAX];
   ta_list_t *config = NULL;
+
   if ((fd = fopen (file_path, "r")) == NULL)
     return NULL;
   while (fgets (line, LINE_LEN_MAX, fd))
     {
-      int nparams;
-      char *cmd;
-      char **params;
-      bitu_conf_entry_t *entry;
-      if (line[0] == '#' || line[0] == '\n')
+      bitu_command_t *command;
+
+      /* Getting rid of the '\n' */
+      line[strlen (line) - 1] = '\0';
+
+      /* Skipping invalid commands */
+      if (line[0] == '#' || line[0] == '\0')
         continue;
-      if (!bitu_util_extract_params (line, &cmd, &params, &nparams))
+      if ((command = bitu_command_new (NULL, line, NULL)) == NULL)
         continue;
-      if ((entry = malloc (sizeof (bitu_conf_entry_t))) == NULL)
-        {
-          int i;
-          for (i = 0; i < nparams; i++)
-            free (params[i]);
-          free (params);
-          continue;
-        }
-      entry->cmd = cmd;
-      entry->params = params;
-      entry->nparams = nparams;
-      config = ta_list_append (config, entry);
+      config = ta_list_append (config, command);
     }
   fclose (fd);
 
   return config;
-}
-
-void
-bitu_conf_list_free (ta_list_t *conf)
-{
-  ta_list_t *node ;
-  bitu_conf_entry_t *entry;
-  int i;
-  for (node = conf; node; node = node->next)
-    {
-      entry = (bitu_conf_entry_t *) node->data;
-      for (i = 0; i < entry->nparams; i++)
-        free (entry->params[i]);
-      free (entry->params);
-      free (entry->cmd);
-      free (entry);
-      free (node);
-    }
 }

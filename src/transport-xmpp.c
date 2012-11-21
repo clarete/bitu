@@ -186,6 +186,9 @@ _xmpp_connect (bitu_transport_t *transport)
                                 (ta_xmpp_client_hook_t) presence_noticed_cb,
                                 NULL);
 
+  /* Forwarding the logger */
+  bitu_transport_set_logger (transport, ta_xmpp_client_get_logger (client));
+
   /* Finally, let's connect to the xmpp server and get out! */
   return ta_xmpp_client_connect (client);
 }

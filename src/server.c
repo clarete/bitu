@@ -99,12 +99,20 @@ void
 bitu_server_free (bitu_server_t *server)
 {
   ta_log_info (server->logger, "Gracefully exiting, see you!");
+  ta_object_unref (server->logger);
   hashtable_destroy (server->clients);
   server->can_run = 0;
   close (server->sock);
   unlink (server->sock_path);
   free (server->sock_path);
   free (server);
+}
+
+
+ta_log_t *
+bitu_server_get_logger (bitu_server_t *server)
+{
+  return server->logger;
 }
 
 

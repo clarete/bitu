@@ -71,6 +71,8 @@ bitu_transport_t *bitu_transport_new (const char *uri);
 ta_iri_t *bitu_transport_get_uri (bitu_transport_t *transport);
 int bitu_transport_connect (bitu_transport_t *transport);
 int bitu_transport_run (bitu_transport_t *transport);
+void bitu_transport_set_logger (bitu_transport_t *transport, ta_log_t *logger);
+ta_log_t *bitu_transport_get_logger (bitu_transport_t *transport);
 void *bitu_transport_get_data (bitu_transport_t *transport);
 void bitu_transport_set_data (bitu_transport_t *transport, void *data);
 void bitu_transport_set_callback_connect (bitu_transport_t *transport,
@@ -88,8 +90,11 @@ bitu_command_t *bitu_command_new (bitu_transport_t *transport,
                                   const char *cmd, const char *from);
 void bitu_command_free (bitu_command_t *command);
 bitu_transport_t *bitu_command_get_transport (bitu_command_t *command);
-const char *bitu_command_get_cmd (bitu_command_t *command);
 const char *bitu_command_get_from (bitu_command_t *command);
+const char *bitu_command_get_cmd (bitu_command_t *command);
+const char *bitu_command_get_name (bitu_command_t *command);
+const char **bitu_command_get_params (bitu_command_t *command);
+int bitu_command_get_nparams (bitu_command_t *command);
 
 
 /* Forward declarations for transports */

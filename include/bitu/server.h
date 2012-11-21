@@ -20,6 +20,7 @@
 #define BITU_SERVER_H_ 1
 
 #include <sys/types.h>
+#include <taningia/taningia.h>
 
 typedef struct bitu_server bitu_server_t;
 typedef void (*bitu_server_event_callback_t) (bitu_server_t *server,
@@ -35,6 +36,7 @@ typedef struct
 bitu_server_t *bitu_server_new (const char *sock_path,
                                 bitu_server_callbacks_t callbacks);
 void bitu_server_free (bitu_server_t *server);
+ta_log_t *bitu_server_get_logger (bitu_server_t *server);
 void bitu_server_set_data (bitu_server_t *server, void *data);
 void *bitu_server_get_data (bitu_server_t *server);
 int bitu_server_connect (bitu_server_t *server);

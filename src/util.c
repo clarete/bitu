@@ -21,7 +21,9 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <uuid/uuid.h>
+#include <taningia/error.h>
 #include <bitu/util.h>
+
 
 char *
 bitu_util_strstrip (char *string)
@@ -66,7 +68,7 @@ bitu_util_extract_params (const char *line, char **cmd,
   if (full_len == 0)
     {
       free (line_tmp);
-      return 0;
+      return TA_ERROR;
     }
   for (i = 0; i <= full_len; i++)
     {
@@ -93,7 +95,7 @@ bitu_util_extract_params (const char *line, char **cmd,
               if ((tmp = realloc (eparams, elen)) == NULL)
                 {
                   /* TODO: free eparams and its items */
-                  return 0;
+                  return TA_ERROR;
                 }
               else
                 eparams = tmp;
@@ -121,7 +123,7 @@ bitu_util_extract_params (const char *line, char **cmd,
               if ((tmp = realloc (tok, allocated)) == NULL)
                 {
                   free (tok);
-                  return 0;
+                  return TA_ERROR;
                 }
               else
                 tok = tmp;
@@ -143,7 +145,7 @@ bitu_util_extract_params (const char *line, char **cmd,
   *len = counter;
 
   free (line_tmp);
-  return 1;
+  return TA_OK;
 }
 
 void

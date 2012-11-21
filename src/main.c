@@ -50,7 +50,6 @@
 extern int daemon(int, int);
 #endif
 
-#define SOCKET_PATH    "/tmp/bitu.sock"
 
 static void
 usage (const char *prname)
@@ -67,14 +66,13 @@ usage (const char *prname)
   printf ("  -t,--transport=URI\t\t: URI to connect to a server it "
           "can be a valid JID but must start with 'xmpp:' or an irc uri\n\n");
   printf ("Server Options:\n");
-  printf ("  -s,--server-socket=PATH\t: UNIX socket path of the config "
-          "server\n");
   printf ("  -i,--pid-file=PATH\t\t: Path to store the pid. Useful when "
           "running as daemon\n");
   printf ("  -d,--daemonize\t\t: Send the program to background after "
           "starting\n\n");
   printf ("Report bugs to " PACKAGE_BUGREPORT "\n\n");
 }
+
 
 /* Save the pid file */
 static void
@@ -107,6 +105,36 @@ _save_pid (bitu_app_t *app, const char *pid_file)
   close (pidfd);
 }
 
+
+static void
+_signal_handler (int sig, siginfo_t *si, void *data)
+{
+  switch (sig)
+    {
+    case SIGPIPE:
+      /* Doing nothing here. Just avoiding the default behaviour that
+       * kills the program. */
+      break;
+
+      /* Add more signals here to handle them when needed. */
+
+    default:
+      break;
+    }
+}
+
+
+static void
+_setup_sigaction (bitu_app_t *app)
+{
+  struct sigaction sa;
+  sa.sa_flags = SA_SIGINFO;
+  sa.sa_sigaction = _signal_handler;
+  sigemptyset (&sa.sa_mask);
+
+  if (sigaction (SIGPIPE, &sa, NULL) == -1)
+    ta_log_warn (app->logger, "Unable to install sigaction to catch SIGPIPE");
+}
 
 static
 int _exec_command (void *data, void *extra_data)
@@ -163,52 +191,19 @@ int _exec_command (void *data, void *extra_data)
   return 0;
 }
 
-/* signal handler stuff */
-
-static void
-_signal_handler (int sig, siginfo_t *si, void *data)
-{
-  switch (sig)
-    {
-    case SIGPIPE:
-      /* Doing nothing here. Just avoiding the default behaviour that
-       * kills the program. */
-      break;
-
-      /* Add more signals here to handle them when needed. */
-
-    default:
-      break;
-    }
-}
-
-static void
-_setup_sigaction (bitu_app_t *app)
-{
-  struct sigaction sa;
-  sa.sa_flags = SA_SIGINFO;
-  sa.sa_sigaction = _signal_handler;
-  sigemptyset (&sa.sa_mask);
-
-  if (sigaction (SIGPIPE, &sa, NULL) == -1)
-    ta_log_warn (app->logger, "Unable to install sigaction to catch SIGPIPE");
-}
-
 
 int
 main (int argc, char **argv)
 {
   bitu_app_t *app;
-  ta_list_t *conf = NULL, *transports = NULL;
+  ta_list_t *conf = NULL;
   ta_list_t *commands = NULL, *tmp = NULL;
-  bitu_conn_manager_t *connections = NULL;
-  char *config_file = NULL, *sock_path = NULL;
+  char *config_file = NULL;
   char *pid_file = NULL;
   int daemonize = 0;
   int c;
   static struct option long_options[] = {
     { "transport", required_argument, NULL, 't' },
-    { "server-socket", required_argument, NULL, 's' },
     { "pid-file", required_argument, NULL, 'i' },
     { "config-file", required_argument, NULL, 'c' },
     { "daemonize", no_argument, NULL, 'd' },
@@ -221,19 +216,13 @@ main (int argc, char **argv)
 
   _setup_sigaction (NULL);
 
-  connections = bitu_conn_manager_new ();
-
   while ((c = getopt_long (argc, argv, "t:c:dhvi:",
                            long_options, NULL)) != -1)
     {
       switch (c)
         {
         case 't':
-          bitu_conn_manager_add (connections, optarg);
-          break;
-
-        case 's':
-          sock_path = strdup (optarg);
+          /* bitu_conn_manager_add (connections, optarg); */
           break;
 
         case 'c':
@@ -293,75 +282,32 @@ main (int argc, char **argv)
 
       for (tmp = conf; tmp; tmp = tmp->next)
         {
-          bitu_conf_entry_t *entry;
-          entry = tmp->data;
-          if (strcmp (entry->cmd, "transport") == 0)
-            bitu_conn_manager_add (connections, entry->params[0]);
-          else if (strcmp (entry->cmd, "server-sock-path") == 0)
-            sock_path = entry->params[0];
-          else if (strcmp (entry->cmd, "pid-file") == 0 && pid_file == NULL)
-            pid_file = strdup (entry->params[0]);
-          else if (strcmp (entry->cmd, "include") == 0)
-            config_file = strdup (entry->params[0]);
+          const char *name;
+          bitu_command_t *command;
+
+          command = tmp->data;
+          name = bitu_command_get_name (command);
+
+          if (strcmp (name, "pid-file") == 0 && pid_file == NULL)
+            pid_file = strdup ((bitu_command_get_params (command))[0]);
+          else if (strcmp (name, "include") == 0)
+            config_file = strdup ((bitu_command_get_params (command))[0]);
           else
-            commands = ta_list_append (commands, entry);
+            commands = ta_list_append (commands, command);
         }
     }
 
-  /* Some param validation */
-  if (bitu_conn_manager_get_n_transports (connections) == 0)
-    {
-      const ta_error_t *error;
-      if ((error = ta_error_last ()) != NULL)
-        printf ("Error: %s\n", error->message);
-      usage (argv[0]);
-      ta_list_free (commands);
-      exit (EXIT_FAILURE);
-    }
-  if (sock_path == NULL)
-    sock_path = strdup (SOCKET_PATH);
+  /* Creating the app. We'll need a logger sooner than the rest of the
+   * things here */
+  app = bitu_app_new ();
 
-  /* Allocating the application context */
-  if ((app = malloc (sizeof (bitu_app_t))) == NULL)
-    {
-      ta_list_free (commands);
-      exit (EXIT_FAILURE);
-    }
-
-  /* Preparing log file stuff */
-  app->logfile = NULL;
-  app->logfd = -1;
-  app->logflags = 0;
-
-  /* List of connections */
-  app->connections = connections;
-
-  /* Preparing the plugin context */
-  app->plugin_ctx = bitu_plugin_ctx_new ();
-
-  /* main application logger */
-  app->logger = ta_log_new ("bitu-main");
-
-  /* Initializing the local server that will handle configuration
-   * interaction. */
-  /* server = bitu_server_new (sock_path); */
-  free (sock_path);
-
-  /* Running all commands found in the config file. */
-  /* for (tmp = commands; tmp; tmp = tmp->next) */
-  /*   { */
-  /*     bitu_conf_entry_t *entry; */
-  /*     char *answer = NULL; */
-  /*     int answer_size; */
-  /*     entry = (bitu_conf_entry_t *) tmp->data; */
-  /*     answer = bitu_server_exec_cmd (server, entry->cmd, entry->params, */
-  /*                                    entry->nparams, &answer_size); */
-  /*     if (answer && answer_size > 1) */
-  /*       ta_log_warn (app->logger, "Warn running command %s: %s", */
-  /*                    entry->cmd, answer); */
-  /*     free (answer); */
-  /*   } */
+  /* Loading the configuration file into the app. It's going to execute
+   * all the commands declared in the config file. */
+  bitu_app_load_config (app, commands);
   ta_list_free (commands);
+
+  /* Running the transports */
+  int rolou = bitu_app_run_transports (app);
 
   /* Sending the rest of the program to the background if requested */
   if (daemonize)
@@ -379,20 +325,10 @@ main (int argc, char **argv)
   if (pid_file != NULL)
     _save_pid (app, pid_file);
 
-  /* Walking through all the transports found and trying to connect and
-   * run them. */
-  transports = bitu_conn_manager_get_transports (connections);
-  for (tmp = transports; tmp; tmp = tmp->next)
-    if ((bitu_conn_manager_run (connections, tmp->data)) != BITU_CONN_STATUS_OK)
-      ta_log_warn (app->logger, "Transport `%s' not initialized", tmp->data);
-  ta_list_free (transports);
-  bitu_conn_manager_consume (connections, (bitu_queue_callback_consume_t) _exec_command, NULL);
-
   /* Our current main loop is this crap, sorry. */
-  while (1)
-    {
+  if (rolou == TA_OK)
+    while (1)
       sleep (1);
-    }
 
   /* Cleaning things up after shutting the server down */
   if (pid_file != NULL && access (pid_file, X_OK) == 0)

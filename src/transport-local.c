@@ -89,6 +89,7 @@ _bitu_local_transport (bitu_transport_t *transport)
   server = bitu_server_new (sock_path, callbacks);
   bitu_server_set_data (server, transport);
   bitu_transport_set_data (transport, server);
+  bitu_transport_set_logger (transport, bitu_server_get_logger (server));
 
   /* Filling out the transport api with the local callbacks to
    * connect, run the server and send messages */

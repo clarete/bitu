@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <taningia/taningia.h>
 #include <bitu/conf.h>
+#include <bitu/transport.h>
 
 int
 main (int argc, char **argv)
@@ -32,15 +33,17 @@ main (int argc, char **argv)
     }
   for (tmp = conf; tmp; tmp = tmp->next)
     {
-      bitu_conf_entry_t *entry;
+      bitu_command_t *command;
+      char **params;
       char *cmd, *param;
       int i = 0;
-      entry = tmp->data;
-      cmd = entry->cmd;
+
+      command = tmp->data;
+      cmd = bitu_command_get_name (command);
+      params = bitu_command_get_params (command);
       printf ("Cmd: %s\n", cmd);
-      while ((param = entry->params[i++]) != NULL)
+      while ((param = params[i++]) != NULL)
         printf (" * %s\n", param);
     }
-  bitu_conf_list_free (conf);
   return 0;
 }

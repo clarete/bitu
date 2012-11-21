@@ -27,19 +27,25 @@
 #include "hashtable.h"
 
 typedef struct {
-  /* Everybody needs to log stuff */
-  ta_log_t *logger;
-
   /* The main components */
   hashtable_t *environment;
+  hashtable_t *commands;
   bitu_conn_manager_t *connections;
   bitu_plugin_ctx_t *plugin_ctx;
 
-  /* Stuff needed in the main.c file */
+  /* Logging stuff */
+  ta_log_t *logger;
   char *logfile;
   int logfd;
   int logflags;
 } bitu_app_t;
 
+
+bitu_app_t *bitu_app_new (void);
+void bitu_app_free (bitu_app_t *app);
+int bitu_app_load_config (bitu_app_t *app, ta_list_t *config);
+int bitu_app_dump_config (bitu_app_t *app);
+int bitu_app_exec_command (bitu_app_t *app, bitu_command_t *command, char **output);
+int bitu_app_run_transports (bitu_app_t *app);
 
 #endif /* BITU_APP_H_ */

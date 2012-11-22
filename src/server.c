@@ -133,7 +133,6 @@ bitu_server_get_data (bitu_server_t *server)
 int
 bitu_server_connect (bitu_server_t *server)
 {
-  int len;
   struct sockaddr_un local;
 
   if ((server->sock = socket (AF_UNIX, SOCK_STREAM, 0)) == -1)
@@ -146,8 +145,8 @@ bitu_server_connect (bitu_server_t *server)
   strcpy (local.sun_path, server->sock_path);
   unlink (local.sun_path);
 
-  len = strlen (local.sun_path) + sizeof (local.sun_family);
-  if (bind (server->sock, (struct sockaddr *) &local, len) == -1)
+  if (bind (server->sock, (struct sockaddr *) &local,
+            sizeof (struct sockaddr_un)) == -1)
     {
       ta_log_critical (server->logger,
                        "Error when binding to socket %s: %s",

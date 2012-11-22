@@ -176,7 +176,6 @@ main (int argc, char **argv)
 {
   int s;
   struct sockaddr_un remote;
-  socklen_t len;
   char *socket_path = NULL;
   char *hfile;
   int arglen = argc - 1;
@@ -225,8 +224,8 @@ main (int argc, char **argv)
 
   remote.sun_family = AF_UNIX;
   strcpy (remote.sun_path, socket_path);
-  len = strlen (remote.sun_path) + sizeof (remote.sun_family);
-  if (connect (s, (struct sockaddr *) &remote, len) == -1)
+  if (connect (s, (struct sockaddr *) &remote,
+               sizeof (struct sockaddr_un)) == -1)
     {
       fprintf (stderr, "Error when connecting: %s\n", strerror (errno));
       return EXIT_FAILURE;

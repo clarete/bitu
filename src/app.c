@@ -196,6 +196,27 @@ bitu_app_run_transports (bitu_app_t *app)
 
 
 static char *
+cmd_help (bitu_app_t *app, char **params, int num_params)
+{
+  char *message;
+  ta_buf_t buf = TA_BUF_INIT;
+
+  ta_buf_alloc (&buf, 256);
+
+  ta_buf_cat (&buf, "Hi, I'm a bitU bot, the first of my kin\n\n");
+  ta_buf_cat (&buf, "There are two main ways to interact with me:\n");
+  ta_buf_cat (&buf, " 1) type 'list commands' and access all the commands available\n");
+  ta_buf_cat (&buf, " 2) type 'list plugins' and see all currently loaded plugins\n\n");
+  ta_buf_cat (&buf, "For more information, you can go to my home: ");
+  ta_buf_cat (&buf, "http://github.com/clarete/bitu");
+
+  message = strdup (ta_buf_cstr (&buf));
+  ta_buf_dealloc (&buf);
+  return message;
+}
+
+
+static char *
 cmd_set (bitu_app_t *app, char **params, int num_params)
 {
   char *error;
@@ -606,6 +627,7 @@ _validate_min_num_params (const char *cmd, int x, int y)
 static void
 _register_commands (bitu_app_t *app)
 {
+  hashtable_set (app->commands, "help", cmd_help);
   hashtable_set (app->commands, "set", cmd_set);
   hashtable_set (app->commands, "get", cmd_get);
   hashtable_set (app->commands, "unset", cmd_unset);

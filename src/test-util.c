@@ -25,15 +25,15 @@
 void
 test_strstrip (void)
 {
-  char *orig, *stripped;
-  orig = strdup (" to be stripped out! ");
+  char *stripped;
+  const char *orig = " to be stripped out! ";
   printf ("Stripping message `%s': ", orig);
 
   stripped = bitu_util_strstrip (orig);
   assert (strcmp (stripped, "to be stripped out!") == 0);
   printf ("`%s'\n", stripped);
 
-  free (orig);
+  free (stripped);
 }
 
 void

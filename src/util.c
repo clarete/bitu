@@ -26,21 +26,16 @@
 
 
 char *
-bitu_util_strstrip (char *string)
+bitu_util_strstrip (const char *string)
 {
-  char *s;
-  int len = strlen (string);
+  char *s = (char *) string;
+  int len = strlen (s);
 
-  while (len--)
-    {
-      if (isspace (string[len]))
-        string[len] = '\0';
-      else
-        break;
-    }
-
-  for (s = string; isspace (*s); s++);
-  return s;
+  while (isspace (s[len - 1]))
+    --len;
+  while (*s && isspace (*s))
+    ++s, --len;
+  return strndup (s, len);
 }
 
 int
@@ -52,7 +47,7 @@ bitu_util_extract_params (const char *line, char **cmd,
   int bufsize = 128;
   int inside_quotes = 0;
 
-  char *line_tmp, *ecmd = NULL;
+  char *ecmd = NULL;
   char **tmp, **eparams = NULL;
   int counter = 0;
 
@@ -61,13 +56,12 @@ bitu_util_extract_params (const char *line, char **cmd,
   int allocated = 0;
   char *tok = NULL;
 
-  line_tmp = strdup (line);
-  s = bitu_util_strstrip (line_tmp);
+  s = bitu_util_strstrip (line);
 
   full_len = strlen (s);
   if (full_len == 0)
     {
-      free (line_tmp);
+      free (s);
       return TA_ERROR;
     }
   for (i = 0; i <= full_len; i++)
@@ -144,7 +138,7 @@ bitu_util_extract_params (const char *line, char **cmd,
   *params = eparams;
   *len = counter;
 
-  free (line_tmp);
+  free (s);
   return TA_OK;
 }
 

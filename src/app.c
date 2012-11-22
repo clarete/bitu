@@ -160,6 +160,9 @@ int _exec_command (void *data, void *extra_data)
       ta_log_warn (app->logger,
                    "Unable to send a message to the user %s",
                    bitu_command_get_from (command));
+
+  if (output)
+    free (output);
   return status;
 }
 
@@ -174,10 +177,24 @@ bitu_app_run_transports (bitu_app_t *app)
    * run them. */
   transports = bitu_conn_manager_get_transports (app->connections);
   for (tmp = transports; tmp; tmp = tmp->next)
-    if ((bitu_conn_manager_run (app->connections, tmp->data)) != BITU_CONN_STATUS_OK)
-      ta_log_warn (app->logger, "Transport `%s' not initialized", tmp->data);
-    else
-      connected++;
+    switch (bitu_conn_manager_run (app->connections, tmp->data))
+      {
+      case BITU_CONN_STATUS_OK:
+        connected++;
+        break;
+      case BITU_CONN_STATUS_ALREADY_RUNNING:
+        ta_log_warn (app->logger, "Transport `%s' already running", tmp->data);
+        break;
+      case BITU_CONN_STATUS_TRANSPORT_NOT_FOUND:
+        ta_log_warn (app->logger, "Transport `%s' not found", tmp->data);
+        break;
+      case BITU_CONN_STATUS_CONNECTION_FAILED:
+        ta_log_warn (app->logger, "Transport `%s' failed to connect", tmp->data);
+        break;
+      default:
+        ta_log_warn (app->logger, "Transport `%s' not initialized", tmp->data);
+        break;
+      }
   ta_list_free (transports);
 
   /* Starting the consumer thread */
@@ -291,11 +308,101 @@ static char *
 cmd_transport (bitu_app_t *app, char **params, int num_params)
 {
   char *error;
-  if ((error = _validate_num_params ("transport", 2, num_params)) != NULL)
+  if ((error = _validate_min_num_params ("transport", 1, num_params)) != NULL)
     return error;
 
   if (strcmp (params[0], "add") == 0)
-    bitu_conn_manager_add (app->connections, params[1]);
+    {
+      if ((error = _validate_num_params ("transport add", 2, num_params)) != NULL)
+        return error;
+      bitu_conn_manager_add (app->connections, params[1]);
+      return NULL;
+    }
+  else if (strcmp (params[0], "remove") == 0)
+    {
+      if ((error = _validate_num_params ("transport remove", 2, num_params)) != NULL)
+        return error;
+      switch (bitu_conn_manager_remove (app->connections, params[1]))
+        {
+        case BITU_CONN_STATUS_STILL_RUNNING:
+          return strdup ("You have to disconnect the transport before removing");
+        case BITU_CONN_STATUS_TRANSPORT_NOT_FOUND:
+          return strdup ("Transport not found");
+        case BITU_CONN_STATUS_OK:
+        default:
+          return NULL;
+        }
+    }
+  else if (strcmp (params[0], "list") == 0)
+    {
+      ta_buf_t buf = TA_BUF_INIT;
+      ta_iri_t *uri;
+      ta_list_t *transports = NULL, *tmp = NULL;
+      bitu_transport_t *transport;
+      char *message;
+      char status[8];
+
+      ta_buf_alloc (&buf, 32);
+
+      transports = bitu_conn_manager_get_transports (app->connections);
+      for (tmp = transports; tmp; tmp = tmp->next)
+        {
+          transport =
+            bitu_conn_manager_get_transport (app->connections, tmp->data);
+          if (transport == NULL)
+            continue;
+          uri = bitu_transport_get_uri (transport);
+
+          if (bitu_transport_is_running (transport) == TA_OK)
+            strcpy (status, "running");
+          else
+            strcpy (status, "stopped");
+          ta_buf_catf (&buf, "[%s] %s", status, ta_iri_to_string (uri));
+
+          /* We don't want line breaks in the end of the string */
+          if (tmp->next != NULL)
+            ta_buf_catf (&buf, "\n");
+        }
+      message = strdup (ta_buf_cstr (&buf));
+      ta_buf_dealloc (&buf);
+      return message;
+    }
+  else if (strcmp (params[0], "connect") == 0)
+    {
+      bitu_conn_status_t status;
+      if ((error = _validate_num_params ("transport connect", 2, num_params)) != NULL)
+        return error;
+      status = bitu_conn_manager_run (app->connections, params[1]);
+      switch (status)
+        {
+        case BITU_CONN_STATUS_OK:
+          return NULL;
+        case BITU_CONN_STATUS_TRANSPORT_NOT_FOUND:
+          return strdup ("Transport not found, stop wasting my time");
+        case BITU_CONN_STATUS_ALREADY_RUNNING:
+          return strdup ("Transport already running, can't you see it???");
+        default:
+          return strdup ("I really don't know wtf just happened");
+        }
+    }
+  else if (strcmp (params[0], "disconnect") == 0)
+    {
+      bitu_conn_status_t status;
+      if ((error = _validate_num_params ("transport disconnect", 2, num_params)) != NULL)
+        return error;
+      status = bitu_conn_manager_shutdown (app->connections, params[1]);
+      switch (status)
+        {
+        case BITU_CONN_STATUS_OK:
+          return NULL;
+        case BITU_CONN_STATUS_TRANSPORT_NOT_FOUND:
+          return strdup ("Transport not found, stop wasting my time");
+        case BITU_CONN_STATUS_ALREADY_SHUTDOWN:
+          return strdup ("Transport already shutdown, do you want to kill it twice??");
+        default:
+          return strdup ("I really don't know wtf just happened");
+        }
+    }
   return NULL;
 }
 

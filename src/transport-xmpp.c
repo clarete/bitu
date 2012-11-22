@@ -190,15 +190,44 @@ _xmpp_connect (bitu_transport_t *transport)
   bitu_transport_set_logger (transport, ta_xmpp_client_get_logger (client));
 
   /* Finally, let's connect to the xmpp server and get out! */
-  return ta_xmpp_client_connect (client);
+  return ta_xmpp_client_connect (client) == TA_OK
+    ? BITU_CONN_STATUS_OK
+    : BITU_CONN_STATUS_CONNECTION_FAILED;
 }
+
+
+static int
+_xmpp_disconnect (bitu_transport_t *transport)
+{
+  ta_xmpp_client_t *client =
+    (ta_xmpp_client_t *) bitu_transport_get_data (transport);
+
+  if (client == NULL)
+    return BITU_CONN_STATUS_ALREADY_SHUTDOWN;
+
+  ta_xmpp_client_disconnect (client);
+  ta_object_unref (client);
+  return BITU_CONN_STATUS_OK;
+}
+
 
 static int
 _xmpp_run (bitu_transport_t *transport)
 {
   ta_xmpp_client_t *client =
     (ta_xmpp_client_t *) bitu_transport_get_data (transport);
-  return ta_xmpp_client_run (client, 0);
+  return ta_xmpp_client_run (client, 0) == TA_OK
+    ? BITU_CONN_STATUS_OK
+    : BITU_CONN_STATUS_ERROR;
+}
+
+
+static int
+_xmpp_is_running (bitu_transport_t *transport)
+{
+  ta_xmpp_client_t *client =
+    (ta_xmpp_client_t *) bitu_transport_get_data (transport);
+  return client == NULL ? TA_ERROR : ta_xmpp_client_is_running (client);
 }
 
 
@@ -225,6 +254,8 @@ int
 _bitu_xmpp_transport (bitu_transport_t *transport)
 {
   bitu_transport_set_callback_connect (transport, _xmpp_connect);
+  bitu_transport_set_callback_disconnect (transport, _xmpp_disconnect);
+  bitu_transport_set_callback_is_running (transport, _xmpp_is_running);
   bitu_transport_set_callback_run (transport, _xmpp_run);
   bitu_transport_set_callback_send (transport, _xmpp_send);
   return TA_OK;

@@ -131,6 +131,13 @@ bitu_server_get_data (bitu_server_t *server)
 
 
 int
+bitu_server_is_running (bitu_server_t *server)
+{
+  return server->can_run ? TA_OK : TA_ERROR;
+}
+
+
+int
 bitu_server_connect (bitu_server_t *server)
 {
   struct sockaddr_un local;
@@ -168,6 +175,12 @@ bitu_server_connect (bitu_server_t *server)
   return TA_OK;
 }
 
+int
+bitu_server_disconnect (bitu_server_t *server)
+{
+  server->can_run = 0;
+  return TA_OK;
+}
 
 int
 bitu_server_recv (bitu_server_t *server, int sock,
@@ -219,17 +232,31 @@ bitu_server_send (bitu_server_t *server, const char *msg, const char *to)
   bitu_client_t * client;
   int n;
   int sock;
+  size_t bufsize;
   size_t sent = 0;
-  size_t bufsize = strlen (msg);
+  char *message;
 
   if ((client = hashtable_get (server->clients, to)) == NULL)
     return TA_ERROR;
+
+  /* Sending a terminator character just to notify the client that the
+   * command finished executing and the client can move on. */
+  if (msg == NULL)
+    {
+      message = strdup ("\0");
+      bufsize = 1;
+    }
+  else
+    {
+      bufsize = strlen (msg);
+      message = strndup (msg, bufsize);
+    }
 
   sock = bitu_client_get_socket (client);
 
   while (sent < bufsize)
     {
-      n = send (sock, msg, bufsize, 0);
+      n = send (sock, message, bufsize, 0);
       if (n == -1 && errno == EAGAIN)
         continue;
       if (n == -1)
@@ -239,6 +266,8 @@ bitu_server_send (bitu_server_t *server, const char *msg, const char *to)
         }
       sent += n;
     }
+
+  free (message);
   return TA_OK;
 }
 
@@ -265,6 +294,11 @@ bitu_server_run (bitu_server_t *server)
       do
         sock = accept (server->sock, (struct sockaddr *) &remote, &len);
       while (sock == -1 && errno == EINTR);
+
+      /* accept() will break if the server stops, so let's just bail out
+       * here */
+      if (sock == -1 && !server->can_run)
+        break;
 
       /* Unlucky, some thing is wrong. Report and fail */
       if (sock == -1)

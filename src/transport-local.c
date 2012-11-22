@@ -22,6 +22,41 @@
 #include <bitu/server.h>
 
 
+static void _message_received (bitu_server_t *server,
+                               const char *event,
+                               const char *client,
+                               const char *message);
+
+
+static void
+_load_server (bitu_transport_t *transport)
+{
+  bitu_server_callbacks_t callbacks;
+  const char *sock_path;
+  bitu_server_t *server;
+  ta_iri_t *uri;
+
+  uri = bitu_transport_get_uri (transport);
+  sock_path = ta_iri_get_path (uri);
+
+  /* Filling out server event callbacks */
+  memset (&callbacks, 0, sizeof (callbacks));
+  callbacks.message_received = _message_received;
+
+  /* And now, we need to create an instance of our server and set the
+   * transport in the free slot that the server API gives us in case we
+   * need to store random things to use with the server callbacks.
+   *
+   * Such a nice coincidence! The transport API has the same empty
+   * slot. Let's use it to save the server and pass it through the
+   * connect/run/send transport functions */
+  server = bitu_server_new (sock_path, callbacks);
+  bitu_server_set_data (server, transport);
+  bitu_transport_set_data (transport, server);
+  bitu_transport_set_logger (transport, bitu_server_get_logger (server));
+}
+
+
 /* Callback connected to the "message-received" event in the bitu_server
  * that we instantiate for the local transport. It basically just
  * forwards the received command to the consumer queue. */
@@ -42,7 +77,42 @@ _message_received (bitu_server_t *server,
 static int
 _local_connect (bitu_transport_t *transport)
 {
-  return bitu_server_connect (bitu_transport_get_data (transport));
+  bitu_server_t *server = bitu_transport_get_data (transport);
+  if (server == NULL)
+    {
+      _load_server (transport);
+      server = bitu_transport_get_data (transport);
+
+      if (bitu_server_connect (server) != TA_OK)
+        return BITU_CONN_STATUS_CONNECTION_FAILED;
+      else
+        return BITU_CONN_STATUS_OK;
+    }
+  return BITU_CONN_STATUS_ALREADY_RUNNING;
+}
+
+
+/* Shuts the server down */
+static int
+_local_disconnect (bitu_transport_t *transport)
+{
+  int status;
+  bitu_server_t *server = bitu_transport_get_data (transport);
+
+  /* There's no need to free it twice, right? */
+  if (server == NULL)
+    return BITU_CONN_STATUS_ALREADY_SHUTDOWN;
+
+  status = bitu_server_disconnect (server);
+
+  /* We'll actually allocate another one if the user decides to connect
+   * again. */
+  bitu_server_free (server);
+
+  /* Resetting the server in the transport user_data field */
+  bitu_transport_set_data (transport, NULL);
+
+  return status == TA_OK ? BITU_CONN_STATUS_OK : BITU_CONN_STATUS_ERROR;
 }
 
 
@@ -52,6 +122,15 @@ static int
 _local_run (bitu_transport_t *transport)
 {
   return bitu_server_run (bitu_transport_get_data (transport));
+}
+
+
+/* Server status */
+static int
+_local_is_running (bitu_transport_t *transport)
+{
+  bitu_server_t *server = bitu_transport_get_data (transport);
+  return (server == NULL) ? TA_ERROR : bitu_server_is_running (server);
 }
 
 
@@ -67,33 +146,11 @@ _local_send (bitu_transport_t *transport, const char *msg, const char *to)
 int
 _bitu_local_transport (bitu_transport_t *transport)
 {
-  const char *sock_path;
-  bitu_server_t *server;
-  ta_iri_t *uri;
-  bitu_server_callbacks_t callbacks;
-
-  uri = bitu_transport_get_uri (transport);
-  sock_path = ta_iri_get_path (uri);
-
-  /* Filling out server event callbacks */
-  memset (&callbacks, 0, sizeof (callbacks));
-  callbacks.message_received = _message_received;
-
-  /* And now, we need to create an instance of our server and set the
-   * transport in the free slot that the server API gives us in case we
-   * need to store random things to use with the server callbacks.
-   *
-   * Such a nice coincidence! The transport API has the same empty
-   * slot. Let's use it to save the server and pass it through the
-   * connect/run/send transport functions */
-  server = bitu_server_new (sock_path, callbacks);
-  bitu_server_set_data (server, transport);
-  bitu_transport_set_data (transport, server);
-  bitu_transport_set_logger (transport, bitu_server_get_logger (server));
-
   /* Filling out the transport api with the local callbacks to
    * connect, run the server and send messages */
   bitu_transport_set_callback_connect (transport, _local_connect);
+  bitu_transport_set_callback_disconnect (transport, _local_disconnect);
+  bitu_transport_set_callback_is_running (transport, _local_is_running);
   bitu_transport_set_callback_run (transport, _local_run);
   bitu_transport_set_callback_send (transport, _local_send);
   return TA_OK;

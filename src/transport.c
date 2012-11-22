@@ -63,8 +63,9 @@ struct bitu_transport
   bitu_queue_t *commands;
   ta_iri_t *uri;
   void *data;
-  const char *(*protocol) (void);
   int (*connect) (bitu_transport_t *transport);
+  int (*disconnect) (bitu_transport_t *transport);
+  int (*is_running) (bitu_transport_t *transport);
   int (*run) (bitu_transport_t *transport);
   int (*send) (bitu_transport_t *transport,
                const char *msg,
@@ -121,12 +122,21 @@ bitu_conn_manager_add (bitu_conn_manager_t *manager, const char *uri)
 }
 
 
-void
+bitu_conn_status_t
 bitu_conn_manager_remove (bitu_conn_manager_t *manager, const char *uri)
 {
+  bitu_transport_t *transport;
+  if ((transport = hashtable_get (manager->transports, uri)) == NULL)
+    return BITU_CONN_STATUS_TRANSPORT_NOT_FOUND;
+
+  /* We can't disconnect while the transport is running */
+  if (bitu_transport_is_running (transport) == TA_OK)
+    return BITU_CONN_STATUS_STILL_RUNNING;
+
   /* This will also free the transport using the _bitu_transport_free()
    * function, assigned in the creation of the hash table. */
   hashtable_del (manager->transports, uri);
+  return BITU_CONN_STATUS_OK;
 }
 
 
@@ -163,19 +173,30 @@ bitu_conn_manager_get_transport (bitu_conn_manager_t *manager, const char *uri)
 bitu_conn_status_t
 bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri)
 {
+  int status;
   bitu_transport_t *transport;
   if ((transport = bitu_conn_manager_get_transport (manager, uri)) == NULL)
     return BITU_CONN_STATUS_TRANSPORT_NOT_FOUND;
 
   /* Connecting && running the client */
-  if (bitu_transport_connect (transport) == TA_OK)
-    {
-      if (bitu_transport_run (transport) == TA_OK)
-        return BITU_CONN_STATUS_OK;
-      else
-        return BITU_CONN_STATUS_ERROR;
-    }
-  return BITU_CONN_STATUS_CONNECTION_FAILED;
+  if ((status = bitu_transport_connect (transport)) == BITU_CONN_STATUS_OK)
+    return bitu_transport_run (transport);
+  return status;
+}
+
+
+bitu_conn_status_t
+bitu_conn_manager_shutdown (bitu_conn_manager_t *manager, const char *uri)
+{
+  bitu_transport_t *transport;
+  if ((transport = bitu_conn_manager_get_transport (manager, uri)) == NULL)
+    return BITU_CONN_STATUS_TRANSPORT_NOT_FOUND;
+
+  /* Really shutting down */
+  if (bitu_transport_disconnect (transport) == TA_OK)
+    return BITU_CONN_STATUS_OK;
+
+  return BITU_CONN_STATUS_ALREADY_SHUTDOWN;
 }
 
 
@@ -183,7 +204,6 @@ void *
 _do_bitu_conn_manager_consume (void *data)
 {
   _bitu_consumer_params_t *params = (_bitu_consumer_params_t *) data;
-  printf ("Starting the consumer\n");
   bitu_queue_consume (params->queue, params->callback, params->data);
   free (params);
   return NULL;
@@ -308,6 +328,20 @@ bitu_transport_set_callback_connect (bitu_transport_t *transport,
 }
 
 void
+bitu_transport_set_callback_disconnect (bitu_transport_t *transport,
+                                        bitu_transport_callback_disconnect_t callback)
+{
+  transport->disconnect = callback;
+}
+
+void
+bitu_transport_set_callback_is_running (bitu_transport_t *transport,
+                                        bitu_transport_callback_is_running_t callback)
+{
+  transport->is_running = callback;
+}
+
+void
 bitu_transport_set_callback_run (bitu_transport_t *transport,
                                  bitu_transport_callback_run_t callback)
 {
@@ -327,6 +361,17 @@ bitu_transport_connect (bitu_transport_t *transport)
   return transport->connect (transport);
 }
 
+int
+bitu_transport_disconnect (bitu_transport_t *transport)
+{
+  return transport->disconnect (transport);
+}
+
+int
+bitu_transport_is_running (bitu_transport_t *transport)
+{
+  return transport->is_running (transport);
+}
 
 int
 bitu_transport_send (bitu_transport_t *transport, const char *msg, const char *to)
@@ -338,7 +383,7 @@ int
 bitu_transport_run (bitu_transport_t *transport)
 {
   bitu_util_start_new_thread ((bitu_util_callback_t) transport->run, transport);
-  return TA_OK;
+  return BITU_CONN_STATUS_OK;
 }
 
 

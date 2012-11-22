@@ -39,10 +39,11 @@ void bitu_server_free (bitu_server_t *server);
 ta_log_t *bitu_server_get_logger (bitu_server_t *server);
 void bitu_server_set_data (bitu_server_t *server, void *data);
 void *bitu_server_get_data (bitu_server_t *server);
+int bitu_server_is_running (bitu_server_t *server);
 int bitu_server_connect (bitu_server_t *server);
+int bitu_server_disconnect (bitu_server_t *server);
 int bitu_server_run (bitu_server_t *server);
 int bitu_server_send (bitu_server_t *server, const char *msg, const char *to);
-void bitu_server_disconnect (bitu_server_t *server);
 
 
 #endif /* BITU_SERVER_H_ */

@@ -33,7 +33,9 @@ typedef enum
   BITU_CONN_STATUS_TRANSPORT_NOT_FOUND,
   BITU_CONN_STATUS_CONNECTION_FAILED,
   BITU_CONN_STATUS_ALREADY_RUNNING,
-  BITU_CONN_STATUS_RUNNING_FAILED
+  BITU_CONN_STATUS_RUNNING_FAILED,
+  BITU_CONN_STATUS_ALREADY_SHUTDOWN,
+  BITU_CONN_STATUS_STILL_RUNNING,
 } bitu_conn_status_t;
 
 
@@ -50,12 +52,13 @@ void bitu_queue_consume (bitu_queue_t *queue,
 
 /* Transport manager API */
 bitu_conn_manager_t *bitu_conn_manager_new (void);
-bitu_transport_t *bitu_conn_manager_add (bitu_conn_manager_t *manager, const char *uri);
-void bitu_conn_manager_remove (bitu_conn_manager_t *manager, const char *uri);
 int bitu_conn_manager_get_n_transports (bitu_conn_manager_t *manager);
 ta_list_t *bitu_conn_manager_get_transports (bitu_conn_manager_t *manager);
+bitu_transport_t *bitu_conn_manager_add (bitu_conn_manager_t *manager, const char *uri);
+bitu_conn_status_t bitu_conn_manager_remove (bitu_conn_manager_t *manager, const char *uri);
 bitu_transport_t *bitu_conn_manager_get_transport (bitu_conn_manager_t *manager, const char *uri);
 bitu_conn_status_t bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri);
+bitu_conn_status_t bitu_conn_manager_shutdown (bitu_conn_manager_t *manager, const char *uri);
 void bitu_conn_manager_consume (bitu_conn_manager_t *manager,
                                 bitu_queue_callback_consume_t callback,
                                 void *data);
@@ -63,6 +66,8 @@ void bitu_conn_manager_consume (bitu_conn_manager_t *manager,
 
 /* Transport api */
 typedef int (*bitu_transport_callback_connect_t) (bitu_transport_t *transport);
+typedef int (*bitu_transport_callback_disconnect_t) (bitu_transport_t *transport);
+typedef int (*bitu_transport_callback_is_running_t) (bitu_transport_t *transport);
 typedef int (*bitu_transport_callback_run_t) (bitu_transport_t *transport);
 typedef int (*bitu_transport_callback_send_t) (bitu_transport_t *transport,
                                                const char *msg, const char *to);
@@ -70,6 +75,8 @@ typedef int (*bitu_transport_callback_send_t) (bitu_transport_t *transport,
 bitu_transport_t *bitu_transport_new (const char *uri);
 ta_iri_t *bitu_transport_get_uri (bitu_transport_t *transport);
 int bitu_transport_connect (bitu_transport_t *transport);
+int bitu_transport_disconnect (bitu_transport_t *transport);
+int bitu_transport_is_running (bitu_transport_t *transport);
 int bitu_transport_run (bitu_transport_t *transport);
 void bitu_transport_set_logger (bitu_transport_t *transport, ta_log_t *logger);
 ta_log_t *bitu_transport_get_logger (bitu_transport_t *transport);
@@ -77,6 +84,10 @@ void *bitu_transport_get_data (bitu_transport_t *transport);
 void bitu_transport_set_data (bitu_transport_t *transport, void *data);
 void bitu_transport_set_callback_connect (bitu_transport_t *transport,
                                           bitu_transport_callback_connect_t callback);
+void bitu_transport_set_callback_disconnect (bitu_transport_t *transport,
+                                             bitu_transport_callback_disconnect_t callback);
+void bitu_transport_set_callback_is_running (bitu_transport_t *transport,
+                                             bitu_transport_callback_is_running_t callback);
 void bitu_transport_set_callback_run (bitu_transport_t *transport,
                                       bitu_transport_callback_run_t callback);
 void bitu_transport_set_callback_send (bitu_transport_t *transport,

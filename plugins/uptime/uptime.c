@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <bitu/transport.h>
 
 const char *
 plugin_name (void)
@@ -26,14 +27,8 @@ plugin_name (void)
   return "uptime";
 }
 
-int
-plugin_num_params (void)
-{
-  return 0;
-}
-
 char *
-plugin_execute (void)
+plugin_execute (bitu_command_t *command)
 {
   int bufsize = 1024;
   char message[bufsize];

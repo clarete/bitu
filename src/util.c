@@ -134,9 +134,12 @@ bitu_util_extract_params (const char *line, char **cmd,
     }
 
   /* Filling all out params */
-  *cmd = ecmd;
-  *params = eparams;
-  *len = counter;
+  if (cmd)
+    *cmd = ecmd;
+  if (params)
+    *params = eparams;
+  if (len)
+    *len = counter;
 
   free (s);
   return TA_OK;

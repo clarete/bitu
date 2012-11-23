@@ -22,6 +22,8 @@
 #include <dlfcn.h>
 #include <bitu/util.h>
 #include <bitu/loader.h>
+#include <bitu/transport.h>
+
 #include "hashtable.h"
 #include "hashtable-utils.h"
 
@@ -31,9 +33,8 @@ struct bitu_plugin
 {
   void *handle;
   const char *(*name) (void);
-  int (*num_params) (void);
-  char *(*execute) (char **);
-  int (*match) (char *);
+  char *(*execute) (bitu_command_t *);
+  int (*match) (const char *);
 };
 
 struct bitu_plugin_ctx
@@ -47,16 +48,10 @@ bitu_plugin_name (bitu_plugin_t *plugin)
   return plugin->name ();
 }
 
-int
-bitu_plugin_num_params (bitu_plugin_t *plugin)
-{
-  return plugin->num_params ();
-}
-
 char *
-bitu_plugin_execute (bitu_plugin_t *plugin, char **params)
+bitu_plugin_execute (bitu_plugin_t *plugin, bitu_command_t *command)
 {
-  return plugin->execute (params);
+  return plugin->execute (command);
 }
 
 void
@@ -81,13 +76,19 @@ bitu_plugin_load (const char *lib)
       return NULL;
     }
 
-  dlerror ();
-
-  plugin->name = dlsym (plugin->handle, "plugin_name");
-  plugin->num_params = dlsym (plugin->handle, "plugin_num_params");
-  plugin->execute = dlsym (plugin->handle, "plugin_execute");
+  /* Loading two required symbols and one optional */
+  if ((plugin->name = dlsym (plugin->handle, "plugin_name")) == NULL)
+    goto error;
+  if ((plugin->execute = dlsym (plugin->handle, "plugin_execute")) == NULL)
+    goto error;
+  plugin->match = dlsym (plugin->handle, "plugin_match");
 
   return plugin;
+
+ error:
+  fprintf (stderr, "Error while loading plugin: %s\n", dlerror ());
+  bitu_plugin_free (plugin);
+  return NULL;
 }
 
 bitu_plugin_ctx_t *
@@ -120,17 +121,17 @@ int
 bitu_plugin_ctx_load (bitu_plugin_ctx_t *plugin_ctx, const char *lib)
 {
   bitu_plugin_t *plugin;
-  plugin = bitu_plugin_load (lib);
-  if (plugin == NULL)
-    return 0;
+  if ((plugin = bitu_plugin_load (lib)) == NULL)
+    return TA_ERROR;
+
   if (hashtable_set (plugin_ctx->plugins,
                      strdup (bitu_plugin_name (plugin)),
                      plugin) == -1)
     {
       bitu_plugin_free (plugin);
-      return 0;
+      return TA_ERROR;
     }
-  return 1;
+  return TA_OK;
 }
 
 int
@@ -140,6 +141,7 @@ bitu_plugin_ctx_unload (bitu_plugin_ctx_t *plugin_ctx, const char *lib)
   plugin = hashtable_get (plugin_ctx->plugins, lib);
   if (plugin == NULL)
     return 0;
+
   /* This line will call `bitu_plugin_free()'. Don't do it again! */
   hashtable_del (plugin_ctx->plugins, lib);
   return 1;
@@ -149,6 +151,35 @@ bitu_plugin_t *
 bitu_plugin_ctx_find (bitu_plugin_ctx_t *plugin_ctx, const char *name)
 {
   return hashtable_get (plugin_ctx->plugins, name);
+}
+
+bitu_plugin_t *
+bitu_plugin_ctx_find_for_cmdline (bitu_plugin_ctx_t *plugin_ctx,
+                                  const char *cmdline)
+{
+  void *iter;
+  bitu_plugin_t *plugin = NULL;
+
+  /* Iterating over all loaded plugins and looking for one that matches
+   * the received command line. The first one that matches will be
+   * returned. */
+  if ((iter = hashtable_iter (plugin_ctx->plugins)) == NULL)
+    return NULL;
+  do
+    {
+      plugin = hashtable_iter_value (iter);
+      if (plugin && plugin->match && plugin->match (cmdline))
+        return plugin;
+    }
+  while ((iter = hashtable_iter_next (plugin_ctx->plugins, iter)));
+
+  /* It was not possible to match the command line in any plugin. We'll
+   * have to parse the command line, get the plugin name and try to
+   * execute it. */
+  if (bitu_util_extract_params (cmdline, NULL, NULL, NULL) == TA_OK)
+    if ((plugin = bitu_plugin_ctx_find (plugin_ctx, cmdline)) != NULL)
+      return plugin;
+  return NULL;
 }
 
 ta_list_t *
@@ -163,25 +194,4 @@ bitu_plugin_ctx_get_list (bitu_plugin_ctx_t *plugin_ctx)
     ret = ta_list_append (ret, hashtable_iter_key (iter));
   while ((iter = hashtable_iter_next (plugin_ctx->plugins, iter)));
   return ret;
-}
-
-int
-bitu_plugin_ctx_load_from_file (bitu_plugin_ctx_t *plugin_ctx,
-                                const char *fname)
-{
-  FILE *fd;
-  char line[LINELEN_MAX];
-
-  if ((fd = fopen (fname, "r")) == NULL)
-    return 0;
-  while (fgets (line, LINELEN_MAX, fd))
-    {
-      const char *lib;
-      if (line[0] == '#')
-        continue;
-      lib = (const char *) bitu_util_strstrip (line);
-      bitu_plugin_ctx_load (plugin_ctx, lib);
-    }
-  fclose (fd);
-  return 1;
 }

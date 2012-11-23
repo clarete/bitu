@@ -32,8 +32,7 @@
  * manually.
  *
  * Our plugin interface counst, currently, with three methods:
- * `plugin_name()', `plugin_num_params()' (currently not used) and
- * `plugin_execute()'.
+ * `plugin_name()' and `plugin_execute()'.
  */
 
 int
@@ -58,9 +57,8 @@ main (int argc, char **argv)
     {
       char *message;
       message = bitu_plugin_execute (plugin, NULL);
-      printf ("Name: %s, num_params: %d: message:\n%s",
+      printf ("Name: %s, message:\n%s",
               bitu_plugin_name (plugin),
-              bitu_plugin_num_params (plugin),
               message);
       free (message);
     }

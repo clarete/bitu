@@ -124,21 +124,32 @@ int
 bitu_app_exec_command (bitu_app_t *app, bitu_command_t *command, char **output)
 {
   char answer[128];
-  const char *name = bitu_command_get_name (command);
   command_t func;
+  bitu_plugin_t *plugin;
+  const char *cmd = bitu_command_get_cmd (command);;
 
-  if ((func = hashtable_get (app->commands, name)) == NULL)
+  /* Handling our internal commands first. No plugin can override
+   * them */
+  if ((func = hashtable_get (app->commands, bitu_command_get_name (command))) != NULL)
     {
-      snprintf (answer, sizeof (answer), "Command `%s' not found", name);
-      ta_log_warn (app->logger, answer);
-      *output = strdup (answer);
-      return TA_ERROR;
+      *output = func (app,
+                      bitu_command_get_params (command),
+                      bitu_command_get_nparams (command));
+      return TA_OK;
     }
 
-  *output = func (app,
-                  bitu_command_get_params (command),
-                  bitu_command_get_nparams (command));
-  return TA_OK;
+  /* Maybe it's a plugin, let's try to find it */
+  if ((plugin = bitu_plugin_ctx_find_for_cmdline (app->plugin_ctx, cmd)) != NULL)
+    {
+      *output = bitu_plugin_execute (plugin, command);
+      return TA_OK;
+    }
+
+  /* No handlers were found, time to give the bad news to the user */
+  snprintf (answer, sizeof (answer), "No handler for the following command: `%s'", cmd);
+  ta_log_warn (app->logger, answer);
+  *output = strdup (answer);
+  return TA_ERROR;
 }
 
 
@@ -422,7 +433,7 @@ cmd_load (bitu_app_t *app, char **params, int num_params)
     return NULL;
 
   snprintf (libname, fullsize, "lib%s.so", params[0]);
-  if (bitu_plugin_ctx_load (app->plugin_ctx, libname))
+  if (bitu_plugin_ctx_load (app->plugin_ctx, libname) == TA_OK)
     {
       ta_log_info (app->logger, "Plugin %s loaded", libname);
       return NULL;

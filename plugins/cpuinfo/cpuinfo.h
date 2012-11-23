@@ -19,6 +19,8 @@
 #ifndef BITU_CPUINFO_H_
 #define BITU_CPUINFO_H_ 1
 
+#include <bitu/transport.h>
+
 typedef struct {
   int number;
   char *vendor_id;
@@ -29,8 +31,6 @@ typedef struct {
 
 const char *plugin_name (void);
 
-int plugin_num_params (void);
-
-char *plugin_execute (void);
+char *plugin_execute (bitu_command_t *command);
 
 #endif /* BITU_CPUINFO_H_ */

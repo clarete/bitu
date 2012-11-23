@@ -400,8 +400,9 @@ bitu_command_new (bitu_transport_t *transport, const char *cmd, const char *from
 
   if ((command = malloc (sizeof (bitu_command_t))) == NULL)
     return NULL;
+
   command->transport = transport;
-  command->cmd = strdup (cmd);
+  command->cmd = bitu_util_strstrip (cmd);
   command->from = from ? strdup (from) : NULL;
 
   /* Filling out some optional arguments after parsing a command */

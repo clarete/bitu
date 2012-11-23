@@ -19,10 +19,10 @@
 #ifndef BITU_UPTIME_H_
 #define BITU_UPTIME_H_ 1
 
+#include <bitu/transport.h>
+
 const char *plugin_name (void);
 
-int plugin_num_params (void);
-
-char *plugin_execute (void);
+char *plugin_execute (bitu_command_t *command);
 
 #endif /* BITU_UPTIME_H_ */

@@ -20,24 +20,30 @@
 #define BITU_LOADER_H_ 1
 
 #include <taningia/taningia.h>
+#include <bitu/transport.h>
 
+
+/* Types */
 typedef struct bitu_plugin bitu_plugin_t;
 typedef struct bitu_plugin_ctx bitu_plugin_ctx_t;
 
+
+/* Plugin object */
 bitu_plugin_t *bitu_plugin_load (const char *lib);
 void bitu_plugin_free (bitu_plugin_t *plugin);
 const char *bitu_plugin_name (bitu_plugin_t *plugin);
-int bitu_plugin_num_params (bitu_plugin_t *plugin);
-char *bitu_plugin_execute (bitu_plugin_t *plugin, char **params);
+char *bitu_plugin_execute (bitu_plugin_t *plugin, bitu_command_t *command);
 
+
+/* Plugin context */
 bitu_plugin_ctx_t *bitu_plugin_ctx_new (void);
 void bitu_plugin_ctx_free (bitu_plugin_ctx_t *plugin_ctx);
 int bitu_plugin_ctx_load (bitu_plugin_ctx_t *plugin_ctx, const char *lib);
 int bitu_plugin_ctx_unload (bitu_plugin_ctx_t *plugin_ctx, const char *lib);
 bitu_plugin_t *bitu_plugin_ctx_find (bitu_plugin_ctx_t *plugin_ctx,
                                      const char *name);
+bitu_plugin_t *bitu_plugin_ctx_find_for_cmdline (bitu_plugin_ctx_t *plugin_ctx,
+                                                 const char *cmdline);
 ta_list_t *bitu_plugin_ctx_get_list (bitu_plugin_ctx_t *plugin_ctx);
-int bitu_plugin_ctx_load_from_file (bitu_plugin_ctx_t *plugin_ctx,
-                                    const char *fname);
 
 #endif /* BITU_LOADER_H_ */

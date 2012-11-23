@@ -136,61 +136,6 @@ _setup_sigaction (bitu_app_t *app)
     ta_log_warn (app->logger, "Unable to install sigaction to catch SIGPIPE");
 }
 
-static
-int _exec_command (void *data, void *extra_data)
-{
-  bitu_command_t *command = (bitu_command_t *) data;
-  char *line = NULL, *stripped = NULL;
-  char *cmd = NULL, *message = NULL;
-  char **params = NULL;
-  int i, len;
-
-  /* Trim performes changes in place, we need to dup it before to
-   * avoid leaking data when we free it */
-  line = strdup (bitu_command_get_cmd (command));
-  stripped = bitu_util_strstrip (line);
-
-  /* Handling commands, no need to mess with plugins */
-  if (stripped[0] == '/')
-    {
-      if (bitu_util_extract_params (stripped, &cmd, &params, &len) != TA_OK)
-        printf ("I should execute an internal command\n");
-    }
-  else
-    {
-      printf ("I should execute a plugin\n");
-      /* TODO: Try to find the plugin */
-      //bitu_plugin_t *plugin = bitu_plugin_ctx_find_for_cmdline (
-    }
-
-
-  /* No answer was returned */
-  if (message == NULL)
-    message = strdup ("The plugin returned nothing");
-
-  /* Actually sending the stuff */
-  if (bitu_transport_send (bitu_command_get_transport (command),
-                           message,
-                           bitu_command_get_from (command)) != TA_OK)
-    /* ta_log_warn (app->logger, */
-    /*              "Unable to send a message to the user %s", */
-    /*              bitu_command_get_from (command)); */
-    ;
-
-  /* Cleaning up the command and the message */
-  bitu_command_free (command);
-  free (message);
-
-  /* Freeing the command and all parameters collected */
-  for (i = 0; i < len; i++)
-    free (params[i]);
-  free (params);
-  if (cmd)
-    free (cmd);
-
-  return 0;
-}
-
 
 int
 main (int argc, char **argv)

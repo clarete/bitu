@@ -104,14 +104,8 @@ plugin_name (void)
   return "cpuinfo";
 }
 
-int
-plugin_num_params (void)
-{
-  return 0;
-}
-
 char *
-plugin_execute (void)
+plugin_execute (bitu_command_t *command)
 {
   char *ret = NULL;
   int num_procs, i;

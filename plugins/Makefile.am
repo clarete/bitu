@@ -1,1 +1,1 @@
-SUBDIRS = cpuinfo uptime
+SUBDIRS = hello cpuinfo uptime

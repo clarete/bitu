@@ -62,6 +62,7 @@ AC_CONFIG_FILES([
         include/bitu/Makefile
         src/Makefile
         plugins/Makefile
+        plugins/hello/Makefile
         plugins/cpuinfo/Makefile
         plugins/uptime/Makefile
 ])

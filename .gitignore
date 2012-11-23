@@ -22,5 +22,6 @@ Makefile.in
 /src/test-server
 /src/test-util
 /src/test-conf
+/plugins/hello/test
 /plugins/cpuinfo/test
 /plugins/uptime/test

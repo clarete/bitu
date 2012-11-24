@@ -110,6 +110,11 @@ bitu_transport_t *
 bitu_conn_manager_add (bitu_conn_manager_t *manager, const char *uri)
 {
   bitu_transport_t *transport;
+
+  /* We cannot override the current */
+  if ((transport = hashtable_get (manager->transports, uri)) != NULL)
+    return transport;
+
   if ((transport = bitu_transport_new (uri)) == NULL)
     return NULL;
 

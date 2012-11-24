@@ -34,7 +34,6 @@ void _irc_event_notice (irc_session_t *session,
                         unsigned int count)
 {
   regex_t re;
-  size_t i;
   char origin_nick[128];
   char pattern[128];
   const char *cmd;
@@ -57,12 +56,6 @@ void _irc_event_notice (irc_session_t *session,
   else
     strncpy (origin_nick, channel, sizeof (origin_nick));
 
-  /* Sending the command to the queue */
-  cmd = params[1];
-  for (i = 0; i < strlen (nick) + 1; i++, *cmd++);
-  command = bitu_command_new (transport, cmd, origin_nick);
-  bitu_transport_queue_command (transport, command);
-
   /* XXX: Debug trash */
   {
     unsigned int cnt;
@@ -80,6 +73,17 @@ void _irc_event_notice (irc_session_t *session,
              "Event: %s, origin: %s, params: %d [%s]\n",
              event, origin_nick, cnt, buf);
   }
+
+  /* Sending the command to the queue */
+  cmd = params[1];
+  command = bitu_command_new (transport, cmd, params[0]);
+  if (bitu_transport_queue_command (transport, command) == TA_ERROR)
+    {
+      bitu_command_free (command);
+      bitu_transport_send (transport,
+                           "Sorry sir, I couldn't queue your command",
+                           params[0]);
+    }
 }
 
 
@@ -127,22 +131,54 @@ _irc_connect (bitu_transport_t *transport)
 {
   int port;
   char *host, *nick;
+  ta_iri_t *uri;
+  irc_session_t *session;
 
-  host = (char *) ta_iri_get_host (bitu_transport_get_uri (transport));
-  nick = (char *) ta_iri_get_user (bitu_transport_get_uri (transport));
+  if ((session = bitu_transport_get_data (transport)) == NULL)
+    if ((session = _irc_get_session (transport)) == NULL)
+      return BITU_CONN_STATUS_CONNECTION_FAILED;
+
+  uri = bitu_transport_get_uri (transport);
+
+  /* Getting important info, like the host, user and port */
+  host = (char *) ta_iri_get_host (uri);
+  nick = (char *) ta_iri_get_user (uri);
   nick = nick ? nick : "bitU";
-  port = ta_iri_get_port (bitu_transport_get_uri (transport));
+  port = ta_iri_get_port (uri);
   port = port ? port : IRC_PORT;
 
-  if (irc_connect (bitu_transport_get_data (transport), host, port, NULL, nick, 0, 0) != 0)
+  /* Finally, connecting to the IRC server */
+  if (irc_connect (session, host, port, NULL, nick, 0, 0) != 0)
     {
-      ta_error_set (BITU_ERROR_TRANSPORT_IRC_CONN,
-                    irc_strerror (irc_errno (bitu_transport_get_data (transport))));
-      return TA_ERROR;
+      ta_error_set (BITU_ERROR_TRANSPORT_IRC_CONN, irc_strerror (irc_errno (session)));
+      return BITU_CONN_STATUS_CONNECTION_FAILED;
     }
-  return TA_OK;
+
+  /* Saving the session to use it in the is_running(), disconnect() and
+   * run() methods */
+  bitu_transport_set_data (transport, session);
+
+  return BITU_CONN_STATUS_OK;
 }
 
+static int
+_irc_disconnect (bitu_transport_t *transport)
+{
+  irc_session_t *session = bitu_transport_get_data (transport);
+  irc_disconnect (session);
+  irc_destroy_session (session);
+  bitu_transport_set_data (transport, NULL);
+  return BITU_CONN_STATUS_OK;
+}
+
+static int
+_irc_is_running (bitu_transport_t *transport)
+{
+  irc_session_t *session = bitu_transport_get_data (transport);
+  if (session == NULL)
+    return TA_ERROR;
+  return irc_is_connected (session) ? TA_OK : TA_ERROR;
+}
 
 static int
 _irc_run (bitu_transport_t *transport)
@@ -169,13 +205,10 @@ _irc_send (bitu_transport_t *transport, const char *msg, const char *to)
 int
 _bitu_irc_transport (bitu_transport_t *transport)
 {
-  irc_session_t *session;
   bitu_transport_set_callback_connect (transport, _irc_connect);
+  bitu_transport_set_callback_disconnect (transport, _irc_disconnect);
+  bitu_transport_set_callback_is_running (transport, _irc_is_running);
   bitu_transport_set_callback_run (transport, _irc_run);
   bitu_transport_set_callback_send (transport, _irc_send);
-
-  if ((session = _irc_get_session (transport)) == NULL)
-      return TA_ERROR;
-  bitu_transport_set_data (transport, session);
   return TA_OK;
 }

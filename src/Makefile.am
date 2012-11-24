@@ -18,7 +18,7 @@ bituctl_SOURCES = shell.c
 bituctl_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
 bituctl_LDADD = $(TANINGIA_LIBS) ./libbitu.la -lreadline
 
-noinst_PROGRAMS = test-plugin test-server test-util test-conf
+noinst_PROGRAMS = test-plugin test-server test-util test-conf test-transports
 
 test_plugin_SOURCES = test-plugin.c
 test_plugin_CFLAGS =  $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
@@ -35,3 +35,7 @@ test_util_LDADD = ./libbitu.la
 test_conf_SOURCES = test-conf.c
 test_conf_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
 test_conf_LDADD = ./libbitu.la $(TANINGIA_LIBS)
+
+test_transports_SOURCES = test-transports.c
+test_transports_CFLAGS = $(TANINGIA_CFLAGS) -I$(top_srcdir)/include
+test_transports_LDADD = ./libbitu.la $(TANINGIA_LIBS)

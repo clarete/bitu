@@ -22,6 +22,7 @@ Makefile.in
 /src/test-server
 /src/test-util
 /src/test-conf
+/src/test-transports
 /plugins/hello/test
 /plugins/cpuinfo/test
 /plugins/uptime/test

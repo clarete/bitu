@@ -92,7 +92,7 @@ void bitu_transport_set_callback_run (bitu_transport_t *transport,
                                       bitu_transport_callback_run_t callback);
 void bitu_transport_set_callback_send (bitu_transport_t *transport,
                                        bitu_transport_callback_send_t callback);
-void bitu_transport_queue_command (bitu_transport_t *transport, bitu_command_t *cmd);
+int bitu_transport_queue_command (bitu_transport_t *transport, bitu_command_t *cmd);
 int bitu_transport_send (bitu_transport_t *transport, const char *msg, const char *to);
 
 

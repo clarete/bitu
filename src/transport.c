@@ -180,7 +180,10 @@ bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri)
 
   /* Connecting && running the client */
   if ((status = bitu_transport_connect (transport)) == BITU_CONN_STATUS_OK)
-    return bitu_transport_run (transport);
+    {
+      bitu_util_start_new_thread ((bitu_util_callback_t) bitu_transport_run, transport);
+      return BITU_CONN_STATUS_OK;
+    }
   return status;
 }
 
@@ -283,10 +286,13 @@ bitu_transport_new (const char *uri)
 }
 
 
-void
+int
 bitu_transport_queue_command (bitu_transport_t *transport, bitu_command_t *cmd)
 {
+  if (transport->commands == NULL)
+    return TA_ERROR;
   bitu_queue_add (transport->commands, cmd);
+  return TA_OK;
 }
 
 
@@ -382,8 +388,7 @@ bitu_transport_send (bitu_transport_t *transport, const char *msg, const char *t
 int
 bitu_transport_run (bitu_transport_t *transport)
 {
-  bitu_util_start_new_thread ((bitu_util_callback_t) transport->run, transport);
-  return BITU_CONN_STATUS_OK;
+  return transport->run (transport);
 }
 
 

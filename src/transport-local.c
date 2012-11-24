@@ -69,7 +69,13 @@ _message_received (bitu_server_t *server,
   bitu_command_t *command = NULL;
   bitu_transport_t *transport = bitu_server_get_data (server);
   command = bitu_command_new (transport, message, client);
-  bitu_transport_queue_command (transport, command);
+  if (bitu_transport_queue_command (transport, command) == TA_ERROR)
+    {
+      bitu_command_free (command);
+      bitu_transport_send (transport,
+                           "Sorry sir, I couldn't queue your command",
+                           client);
+    }
 }
 
 

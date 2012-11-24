@@ -65,7 +65,13 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
     return 0;
 
   command = bitu_command_new (transport, rawbody, pak->from->full);
-  bitu_transport_queue_command (transport, command);
+  if (bitu_transport_queue_command (transport, command) == TA_ERROR)
+    {
+      bitu_command_free (command);
+      bitu_transport_send (transport,
+                           "Sorry sir, I couldn't queue your command",
+                           pak->from->full);
+    }
   return 0;
 }
 

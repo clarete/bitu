@@ -89,10 +89,10 @@ void _irc_event_notice (irc_session_t *session,
 
 void
 _irc_event_connect (irc_session_t *session,
-                    const char *event,
-                    const char *origin,
-                    const char **params,
-                    unsigned int count)
+                    const char *TA_UNUSED(event),
+                    const char *TA_UNUSED(origin),
+                    const char **TA_UNUSED(params),
+                    unsigned int TA_UNUSED(count))
 {
   bitu_transport_t *transport = (bitu_transport_t *) irc_get_ctx (session);
   const char *channel = ta_iri_get_fragment (bitu_transport_get_uri (transport));

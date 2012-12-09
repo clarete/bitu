@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <taningia/taningia.h>
 #include <bitu/transport.h>
 
 const char *
@@ -28,7 +29,7 @@ plugin_name (void)
 }
 
 char *
-plugin_execute (bitu_command_t *command)
+plugin_execute (bitu_command_t *TA_UNUSED(command))
 {
   int bufsize = 1024;
   char message[bufsize];

@@ -21,6 +21,7 @@
 #include <string.h>
 #include <bitu/util.h>
 #include <iksemel.h>
+#include <taningia/taningia.h>
 
 #include "cpuinfo.h"
 
@@ -105,7 +106,7 @@ plugin_name (void)
 }
 
 char *
-plugin_execute (bitu_command_t *command)
+plugin_execute (bitu_command_t *TA_UNUSED(command))
 {
   char *ret = NULL;
   int num_procs, i;

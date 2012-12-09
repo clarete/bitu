@@ -36,7 +36,7 @@
  */
 
 int
-main (int argc, char **argv)
+main ()
 {
   bitu_plugin_t *plugin;
   bitu_plugin_ctx_t *plugin_ctx;

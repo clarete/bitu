@@ -107,7 +107,7 @@ _save_pid (bitu_app_t *app, const char *pid_file)
 
 
 static void
-_signal_handler (int sig, siginfo_t *si, void *data)
+_signal_handler (int sig, siginfo_t *TA_UNUSED(si), void *TA_UNUSED(data))
 {
   switch (sig)
     {

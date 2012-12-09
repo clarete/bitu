@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <taningia/taningia.h>
 #include <bitu/transport.h>
 #include <bitu/server.h>
 
@@ -62,7 +63,7 @@ _load_server (bitu_transport_t *transport)
  * forwards the received command to the consumer queue. */
 static void
 _message_received (bitu_server_t *server,
-                   const char *event,
+                   const char *TA_UNUSED(event),
                    const char *client,
                    const char *message)
 {

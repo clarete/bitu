@@ -21,7 +21,7 @@
 #include "hello.h"
 
 int
-main (int argc, char **argv)
+main ()
 {
   bitu_command_t *command = bitu_command_new (NULL, "Say hello to john!", NULL);
   char *info = plugin_execute (command);

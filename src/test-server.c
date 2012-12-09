@@ -24,7 +24,7 @@
 #include <bitu/loader.h>
 
 int
-main (int argc, char **argv)
+main ()
 {
   bitu_server_t *server;
   bitu_server_callbacks_t callbacks;

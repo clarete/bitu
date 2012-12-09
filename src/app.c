@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <taningia/taningia.h>
 #include <bitu/errors.h>
 #include <bitu/conf.h>
 #include <bitu/transport.h>
@@ -114,7 +115,7 @@ bitu_app_load_config (bitu_app_t *app, ta_list_t *commands)
 
 
 int
-bitu_app_dump_config (bitu_app_t *app)
+bitu_app_dump_config (bitu_app_t *TA_UNUSED(app))
 {
   return TA_OK;
 }
@@ -224,7 +225,9 @@ bitu_app_run_transports (bitu_app_t *app)
 
 
 static char *
-cmd_help (bitu_app_t *app, char **params, int num_params)
+cmd_help (bitu_app_t *TA_UNUSED(app),
+          char **TA_UNUSED(params),
+          int TA_UNUSED(num_params))
 {
   char *message;
   ta_buf_t buf = TA_BUF_INIT;
@@ -278,7 +281,7 @@ cmd_unset (bitu_app_t *app, char **params, int num_params)
 
 
 static char *
-cmd_env (bitu_app_t *app, char **params, int num_params)
+cmd_env (bitu_app_t *app, char **TA_UNUSED(params), int num_params)
 {
   void *iter;
   char *error, *val, *tmp, *pos, *list = NULL;
@@ -467,7 +470,9 @@ cmd_unload (bitu_app_t *app, char **params, int num_params)
 
 
 static char *
-cmd_send (bitu_app_t *app, char **params, int num_params)
+cmd_send (bitu_app_t *TA_UNUSED(app),
+          char **TA_UNUSED(params),
+          int TA_UNUSED(num_params))
 {
   /* const char *jid, *msg; */
   /* iks *xmpp_msg; */
@@ -580,8 +585,10 @@ cmd_list (bitu_app_t *app, char **params, int num_params)
 
 
 static int
-_log_handler (ta_log_t *log, ta_log_level_t level,
-              const char *data, void *user_data)
+_log_handler (ta_log_t *TA_UNUSED(log),
+              ta_log_level_t TA_UNUSED(level),
+              const char *data,
+              void *user_data)
 {
   bitu_app_t *app = (bitu_app_t *) user_data;
   write (app->logfd, data, strlen (data));

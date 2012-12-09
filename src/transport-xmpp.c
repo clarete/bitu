@@ -28,13 +28,13 @@
 /* XMPP client callbacks */
 
 static int
-connected_cb (ta_xmpp_client_t *client, void *data)
+connected_cb (ta_xmpp_client_t *TA_UNUSED(client), void *TA_UNUSED(data))
 {
   return 0;
 }
 
 static int
-auth_cb (ta_xmpp_client_t *client, void *data)
+auth_cb (ta_xmpp_client_t *client, void *TA_UNUSED(data))
 {
   iks *node;
 
@@ -47,14 +47,16 @@ auth_cb (ta_xmpp_client_t *client, void *data)
 }
 
 static int
-auth_failed_cb (ta_xmpp_client_t *client, void *data)
+auth_failed_cb (ta_xmpp_client_t *client, void *TA_UNUSED(data))
 {
   ta_xmpp_client_disconnect (client);
   return 0;
 }
 
 static int
-message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
+message_received_cb (ta_xmpp_client_t *TA_UNUSED(client),
+                     ikspak *pak,
+                     void *data)
 {
   char *rawbody = NULL;
   bitu_transport_t *transport = (bitu_transport_t *) data;
@@ -76,7 +78,9 @@ message_received_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
 }
 
 static int
-presence_noticed_cb (ta_xmpp_client_t *client, ikspak *pak, void *data)
+presence_noticed_cb (ta_xmpp_client_t *client,
+                     ikspak *pak,
+                     void *TA_UNUSED(data))
 {
   ikstack *stack;
   iksid *client_id;

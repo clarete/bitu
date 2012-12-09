@@ -23,7 +23,7 @@
 #include <bitu/transport.h>
 
 int
-main (int argc, char **argv)
+main ()
 {
   ta_list_t *conf, *tmp;
   if ((conf = bitu_conf_read_from_file ("bitu.conf.dist")) == NULL)
@@ -33,10 +33,11 @@ main (int argc, char **argv)
     }
   for (tmp = conf; tmp; tmp = tmp->next)
     {
-      bitu_command_t *command;
-      char **params;
-      char *cmd, *param;
       int i = 0;
+      bitu_command_t *command;
+      const char *param;
+      const char **params;
+      const char *cmd;
 
       command = tmp->data;
       cmd = bitu_command_get_name (command);

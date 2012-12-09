@@ -21,7 +21,7 @@
 #include "uptime.h"
 
 int
-main (int argc, char **argv)
+main ()
 {
   char *info = plugin_execute (NULL);
   printf ("%s", info);

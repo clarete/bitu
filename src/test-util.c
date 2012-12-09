@@ -63,7 +63,7 @@ test_extract_params (void)
 }
 
 int
-main (int argc, char **argv)
+main ()
 {
   test_strstrip ();
   test_extract_params ();

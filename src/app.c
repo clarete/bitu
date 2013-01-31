@@ -186,31 +186,36 @@ int _exec_command (void *data, void *extra_data)
 int
 bitu_app_run_transports (bitu_app_t *app)
 {
-  int connected;
+  int connected = 0;
   ta_list_t *transports = NULL, *tmp = NULL;
 
   /* Walking through all the transports found and trying to connect and
    * run them. */
   transports = bitu_conn_manager_get_transports (app->connections);
+
   for (tmp = transports; tmp; tmp = tmp->next)
-    switch (bitu_conn_manager_run (app->connections, tmp->data))
-      {
-      case BITU_CONN_STATUS_OK:
-        connected++;
-        break;
-      case BITU_CONN_STATUS_ALREADY_RUNNING:
-        ta_log_warn (app->logger, "Transport `%s' already running", tmp->data);
-        break;
-      case BITU_CONN_STATUS_TRANSPORT_NOT_FOUND:
-        ta_log_warn (app->logger, "Transport `%s' not found", tmp->data);
-        break;
-      case BITU_CONN_STATUS_CONNECTION_FAILED:
-        ta_log_warn (app->logger, "Transport `%s' failed to connect", tmp->data);
-        break;
-      default:
-        ta_log_warn (app->logger, "Transport `%s' not initialized", tmp->data);
-        break;
-      }
+    {
+      ta_log_info (app->logger, "Running transport: %s", tmp->data);
+
+      switch (bitu_conn_manager_run (app->connections, tmp->data))
+        {
+        case BITU_CONN_STATUS_OK:
+          connected++;
+          break;
+        case BITU_CONN_STATUS_ALREADY_RUNNING:
+          ta_log_warn (app->logger, "Transport `%s' already running", tmp->data);
+          break;
+        case BITU_CONN_STATUS_TRANSPORT_NOT_FOUND:
+          ta_log_warn (app->logger, "Transport `%s' not found", tmp->data);
+          break;
+        case BITU_CONN_STATUS_CONNECTION_FAILED:
+          ta_log_warn (app->logger, "Transport `%s' failed to connect", tmp->data);
+          break;
+        default:
+          ta_log_warn (app->logger, "Transport `%s' not initialized", tmp->data);
+          break;
+        }
+    }
   ta_list_free (transports);
 
   /* Starting the consumer thread */
@@ -221,6 +226,8 @@ bitu_app_run_transports (bitu_app_t *app)
                                  app);
       return TA_OK;
     }
+
+  ta_log_warn (app->logger, "No transport connected");
   return TA_ERROR;
 }
 

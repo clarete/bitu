@@ -14,8 +14,8 @@ set-log-use-colors true
 # the bot is running. You'll obviously need to restart it if you
 # change something in this section.
 transport add "file:///tmp/bitu.sock"
-transport add "xmpp://alfred:<password>@comum.org"
-transport add "irc://alfredBitU@irc.freenode.net/##bleh"
+# transport add "xmpp://alfred:<password>@comum.org"
+# transport add "irc://alfredBitU@irc.freenode.net##bleh"
 pid-file /tmp/bitu.pid
 
 # Plugin secton

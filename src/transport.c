@@ -155,13 +155,14 @@ bitu_conn_manager_get_n_transports (bitu_conn_manager_t *manager)
 ta_list_t *
 bitu_conn_manager_get_transports (bitu_conn_manager_t *manager)
 {
-  void *iter;
+  void *iter = NULL;
   ta_list_t *keys = NULL;
+
   if ((iter = hashtable_iter (manager->transports)) == NULL)
     return NULL;
   do
     keys = ta_list_append (keys, hashtable_iter_key (iter));
-  while ((iter = hashtable_iter_next (manager->transports, iter)));
+  while ((iter = hashtable_iter_next (manager->transports, iter)) != NULL);
   return keys;
 }
 
@@ -256,6 +257,7 @@ bitu_transport_new (const char *uri)
 
   /* Allocating memory for the new transport */
   transport = malloc (sizeof (bitu_transport_t));
+  transport->data = NULL;
   transport->uri = uri_obj;
   transport->logger = NULL;
 

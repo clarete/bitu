@@ -226,7 +226,7 @@ _xmpp_run (bitu_transport_t *transport)
 {
   ta_xmpp_client_t *client =
     (ta_xmpp_client_t *) bitu_transport_get_data (transport);
-  return ta_xmpp_client_run (client, 0) == TA_OK
+  return ta_xmpp_client_run (client) == TA_OK
     ? BITU_CONN_STATUS_OK
     : BITU_CONN_STATUS_ERROR;
 }

@@ -97,6 +97,10 @@ bitu_app_load_config (bitu_app_t *app, ta_list_t *commands)
 
       command = (bitu_command_t *) tmp->data;
 
+      /* Leaving some traces of what's going on */
+      ta_log_info (app->logger, "Loading command from config file: %s",
+                   bitu_command_get_cmd (command));
+
       /* Commands from config file don't have a transport neither a
        * sender */
       bitu_app_exec_command (app, command, &answer);

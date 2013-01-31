@@ -1,25 +1,26 @@
 # bitu server configuration file. All lines started with `#' are
 # ignored (as you can see =P)
 
+# Log stuff
+# ---------
+# Make sure you always declare the log stuff before anything else
+set-log-level DEBUG
+set-log-file /tmp/bitu.log
+set-log-use-colors true
+
 # Connection info
 # ---------------
 # This is the only part that you'll not be able to reconfigure while
 # the bot is running. You'll obviously need to restart it if you
 # change something in this section.
-transport "xmpp://alfred:<password>@comum.org"
-transport "irc://alfredBitU@irc.freenode.net/##bleh"
-server-sock-path /tmp/bitu.sock
+transport add "file:///tmp/bitu.sock"
+transport add "xmpp://alfred:<password>@comum.org"
+transport add "irc://alfredBitU@irc.freenode.net/##bleh"
 pid-file /tmp/bitu.pid
-
-# Log stuff
-# ---------
-set-log-file /tmp/bitu.log
-set-log-level DEBUG
-set-log-use-colors true
 
 # Plugin secton
 # -------------
 # holds names of libraries that should be loaded at the start of the
 # program.
-load cpuinfo
-load uptime
+# load cpuinfo
+# load uptime

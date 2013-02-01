@@ -156,10 +156,11 @@ bitu_util_start_new_thread (bitu_util_callback_t callback, void *data)
 char *
 bitu_util_uuid4 (void)
 {
-  char buf[36];
+  char *buf;
   uuid_t uuid;
 
+  buf = (char *) malloc (36);
   uuid_generate (uuid);
   uuid_unparse (uuid, buf);
-  return strdup (buf);
+  return buf;
 }

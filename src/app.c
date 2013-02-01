@@ -199,7 +199,7 @@ bitu_app_run_transports (bitu_app_t *app)
 
       switch (bitu_conn_manager_run (app->connections, tmp->data))
         {
-        case BITU_CONN_STATUS_OK:
+        case BITU_CONN_STATUS_SPAWNED:
           connected++;
           break;
         case BITU_CONN_STATUS_ALREADY_RUNNING:
@@ -400,7 +400,7 @@ cmd_transport (bitu_app_t *app, char **params, int num_params)
       status = bitu_conn_manager_run (app->connections, params[1]);
       switch (status)
         {
-        case BITU_CONN_STATUS_OK:
+        case BITU_CONN_STATUS_SPAWNED:
           return NULL;
         case BITU_CONN_STATUS_TRANSPORT_NOT_FOUND:
           return strdup ("Transport not found, stop wasting my time");

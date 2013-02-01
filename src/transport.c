@@ -176,6 +176,17 @@ bitu_conn_manager_get_transport (bitu_conn_manager_t *manager, const char *uri)
 }
 
 
+/* This function is just a thin wrapper to log stuff if the */
+static void
+_bitu_conn_manager_run_transport (bitu_transport_t *transport)
+{
+  if ((bitu_transport_run (transport) == TA_ERROR))
+    if (transport->logger)
+      ta_log_warn (transport->logger, "Failed to run the transport: %s",
+                   transport->uri);
+}
+
+
 bitu_conn_status_t
 bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri)
 {
@@ -187,8 +198,18 @@ bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri)
   /* Connecting && running the client */
   if ((status = bitu_transport_connect (transport)) == BITU_CONN_STATUS_OK)
     {
-      bitu_util_start_new_thread ((bitu_util_callback_t) bitu_transport_run, transport);
-      return BITU_CONN_STATUS_OK;
+      bitu_util_start_new_thread ((bitu_util_callback_t) _bitu_conn_manager_run_transport,
+                                  transport);
+      return BITU_CONN_STATUS_SPAWNED;
+    }
+  else
+    {
+      /* We couldn't run the transport, let's disconnect it */
+      if (transport->logger)
+        ta_log_warn (transport->logger, "Problems when connecting the transport: %s",
+                     transport->uri);
+      bitu_conn_manager_shutdown (manager, uri);
+      return BITU_CONN_STATUS_CONNECTION_FAILED;
     }
   return status;
 }
@@ -202,6 +223,8 @@ bitu_conn_manager_shutdown (bitu_conn_manager_t *manager, const char *uri)
     return BITU_CONN_STATUS_TRANSPORT_NOT_FOUND;
 
   /* Really shutting down */
+  if (transport->logger)
+    ta_log_info (transport->logger, "Shutting down transport: %s", uri);
   if (bitu_transport_disconnect (transport) == TA_OK)
     return BITU_CONN_STATUS_OK;
 
@@ -259,7 +282,7 @@ bitu_transport_new (const char *uri)
   transport = malloc (sizeof (bitu_transport_t));
   transport->data = NULL;
   transport->uri = uri_obj;
-  transport->logger = NULL;
+  transport->logger = ta_log_new (uri);
 
   /* Looking for the right transport. Possible values hardcoded by
    * now */
@@ -298,6 +321,9 @@ bitu_transport_queue_command (bitu_transport_t *transport, bitu_command_t *cmd)
 {
   if (transport->commands == NULL)
     return TA_ERROR;
+  if (transport->logger)
+    ta_log_info (transport->logger, "Command received via transport (%s): %s",
+                 transport->uri, cmd->cmd);
   bitu_queue_add (transport->commands, cmd);
   return TA_OK;
 }
@@ -371,12 +397,17 @@ bitu_transport_set_callback_send (bitu_transport_t *transport,
 int
 bitu_transport_connect (bitu_transport_t *transport)
 {
+  if (transport->logger)
+    ta_log_info (transport->logger, "Connecting transport");
   return transport->connect (transport);
 }
 
 int
 bitu_transport_disconnect (bitu_transport_t *transport)
 {
+  if (transport->logger)
+    ta_log_info (transport->logger, "Disconnecting transport: %s",
+                 transport->uri);
   return transport->disconnect (transport);
 }
 
@@ -395,6 +426,9 @@ bitu_transport_send (bitu_transport_t *transport, const char *msg, const char *t
 int
 bitu_transport_run (bitu_transport_t *transport)
 {
+  if (transport->logger)
+    ta_log_info (transport->logger, "Starting transport main loop: %s",
+                 transport->uri);
   return transport->run (transport);
 }
 

@@ -182,8 +182,7 @@ _bitu_conn_manager_run_transport (bitu_transport_t *transport)
 {
   if ((bitu_transport_run (transport) == TA_ERROR))
     if (transport->logger)
-      ta_log_warn (transport->logger, "Failed to run the transport: %s",
-                   transport->uri);
+      ta_log_warn (transport->logger, "Failed to run the transport");
 }
 
 
@@ -206,8 +205,7 @@ bitu_conn_manager_run (bitu_conn_manager_t *manager, const char *uri)
     {
       /* We couldn't run the transport, let's disconnect it */
       if (transport->logger)
-        ta_log_warn (transport->logger, "Problems when connecting the transport: %s",
-                     transport->uri);
+        ta_log_warn (transport->logger, "Failed to connect");
       bitu_conn_manager_shutdown (manager, uri);
       return BITU_CONN_STATUS_CONNECTION_FAILED;
     }
@@ -224,7 +222,7 @@ bitu_conn_manager_shutdown (bitu_conn_manager_t *manager, const char *uri)
 
   /* Really shutting down */
   if (transport->logger)
-    ta_log_info (transport->logger, "Shutting down transport: %s", uri);
+    ta_log_info (transport->logger, "Shutting down");
   if (bitu_transport_disconnect (transport) == TA_OK)
     return BITU_CONN_STATUS_OK;
 
@@ -322,8 +320,8 @@ bitu_transport_queue_command (bitu_transport_t *transport, bitu_command_t *cmd)
   if (transport->commands == NULL)
     return TA_ERROR;
   if (transport->logger)
-    ta_log_info (transport->logger, "Command received via transport (%s): %s",
-                 transport->uri, cmd->cmd);
+    ta_log_info (transport->logger,
+                 "Command received via transport %s", cmd->cmd);
   bitu_queue_add (transport->commands, cmd);
   return TA_OK;
 }
@@ -406,8 +404,7 @@ int
 bitu_transport_disconnect (bitu_transport_t *transport)
 {
   if (transport->logger)
-    ta_log_info (transport->logger, "Disconnecting transport: %s",
-                 transport->uri);
+    ta_log_info (transport->logger, "Disconnecting");
   return transport->disconnect (transport);
 }
 
@@ -427,8 +424,7 @@ int
 bitu_transport_run (bitu_transport_t *transport)
 {
   if (transport->logger)
-    ta_log_info (transport->logger, "Starting transport main loop: %s",
-                 transport->uri);
+    ta_log_info (transport->logger, "Starting transport main loop");
   return transport->run (transport);
 }
 
@@ -559,11 +555,8 @@ bitu_queue_free (bitu_queue_t *queue)
 void
 bitu_queue_add (bitu_queue_t *queue, void *data)
 {
-  fprintf (stderr, "queue::add() called\n");
-
   /* Exclusive access */
   pthread_mutex_lock (queue->mutex);
-  fprintf (stderr, "queue::add() locked the mutex\n");
 
   /* The queue is full, let's wait until it has free slots to add new
    * commands again */
@@ -575,7 +568,6 @@ bitu_queue_add (bitu_queue_t *queue, void *data)
 
   /* Unlocking the mutex and forwarding the signal saying that our list
    * is not empty anymore */
-  fprintf (stderr, "queue::add() unlocked the mutex\n");
   pthread_mutex_unlock (queue->mutex);
   pthread_cond_signal (queue->not_empty);
 }
@@ -604,15 +596,12 @@ bitu_queue_consume (bitu_queue_t *queue,
 {
   void *data;
 
-  fprintf (stderr, "queue::consume() called\n");
-
   queue->running = 1;
 
   while (queue->running)
     {
       /* Exclusive access */
       pthread_mutex_lock (queue->mutex);
-      fprintf (stderr, "queue::consume() locked the mutex\n");
 
       /* The queue is full, let's wait until it has free slots to add new
        * commands again */
@@ -623,7 +612,6 @@ bitu_queue_consume (bitu_queue_t *queue,
       if ((data = _bitu_queue_pop (queue)) != NULL)
         callback (data, extra_data);
 
-      fprintf (stderr, "queue::consume() unlocked the mutex\n");
       pthread_mutex_unlock (queue->mutex);
       pthread_cond_signal (queue->not_full);
     }
